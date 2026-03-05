@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque[opsz,wdth,wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Outfit";
+  src: url("/assets/fonts/Outfit[wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* CargoTrack Industrial Palette — Deep Slate + Teal Accent */
+    --background: 0.98 0.003 220;
+    --foreground: 0.14 0.02 240;
+
+    --card: 1 0 0;
+    --card-foreground: 0.14 0.02 240;
+
+    --popover: 1 0 0;
+    --popover-foreground: 0.14 0.02 240;
+
+    --primary: 0.55 0.18 190;
+    --primary-foreground: 1 0 0;
+
+    --secondary: 0.94 0.01 220;
+    --secondary-foreground: 0.22 0.03 230;
+
+    --muted: 0.94 0.01 220;
+    --muted-foreground: 0.52 0.02 230;
+
+    --accent: 0.90 0.05 190;
+    --accent-foreground: 0.18 0.06 190;
+
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    --success: 0.62 0.17 145;
+    --success-foreground: 1 0 0;
+
+    --warning: 0.75 0.18 75;
+    --warning-foreground: 0.18 0.04 60;
+
+    --border: 0.88 0.012 220;
+    --input: 0.88 0.012 220;
+    --ring: 0.55 0.18 190;
+
+    --chart-1: 0.55 0.18 190;
+    --chart-2: 0.62 0.17 145;
+    --chart-3: 0.75 0.18 75;
+    --chart-4: 0.627 0.265 303.9;
+    --chart-5: 0.645 0.246 16.439;
+
+    /* Sidebar — deep navy */
+    --sidebar: 0.18 0.04 240;
+    --sidebar-foreground: 0.92 0.01 220;
+    --sidebar-primary: 0.62 0.20 190;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.26 0.05 240;
+    --sidebar-accent-foreground: 0.95 0.01 220;
+    --sidebar-border: 0.28 0.04 240;
+    --sidebar-ring: 0.55 0.18 190;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .success {
+    color: oklch(var(--success));
+  }
+  .bg-success {
+    background-color: oklch(var(--success));
+  }
+  .bg-success\/10 {
+    background-color: oklch(var(--success) / 0.1);
+  }
+  .text-success {
+    color: oklch(var(--success));
+  }
+  .border-success {
+    border-color: oklch(var(--success));
+  }
+  .text-warning {
+    color: oklch(var(--warning));
+  }
+  .bg-warning\/10 {
+    background-color: oklch(var(--warning) / 0.1);
+  }
+  .border-warning {
+    border-color: oklch(var(--warning));
+  }
+  .tracking-rail::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, oklch(var(--primary)), oklch(var(--border)));
+  }
+}
