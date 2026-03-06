@@ -27,6 +27,7 @@ import {
   useLocalSession,
   useTrackingByAWB,
 } from "../../hooks/useLocalStore";
+import { exportBookingsToCSV } from "../../lib/excelExport";
 import { formatDate, formatTimestamp } from "../../lib/helpers";
 import { KYC_LABEL } from "../../lib/kycLabels";
 
@@ -279,11 +280,23 @@ export function FranchiseBookings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">My Bookings</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          View and track all your shipment bookings
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display text-2xl font-bold">My Bookings</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            View and track all your shipment bookings
+          </p>
+        </div>
+        {bookings.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={() => exportBookingsToCSV(bookings)}
+            data-ocid="my_bookings.download_button"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download Excel
+          </Button>
+        )}
       </div>
 
       {bookings.length === 0 ? (

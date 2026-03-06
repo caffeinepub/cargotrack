@@ -9,6 +9,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, FileText, Loader2, Search } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Search } from "lucide-react";
 
 import { motion } from "motion/react";
 import { useState } from "react";
@@ -28,10 +35,12 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { TrackingTimeline } from "../../components/TrackingTimeline";
 import {
   useAllBookings,
+  useAllFranchises,
   useAssignAWBAndApprove,
   useRejectBooking,
   useTrackingByAWB,
 } from "../../hooks/useLocalStore";
+import { exportBookingsToCSV } from "../../lib/excelExport";
 import { formatDate, formatTimestamp } from "../../lib/helpers";
 import { KYC_LABEL } from "../../lib/kycLabels";
 
@@ -291,17 +300,25 @@ function BookingDetailModal({
 
 export function AdminBookings() {
   const { bookings } = useAllBookings();
+  const { franchises } = useAllFranchises();
   const { mutate: assignAWB } = useAssignAWBAndApprove();
   const { mutate: rejectBooking } = useRejectBooking();
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [franchiseFilter, setFranchiseFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [assigningBooking, setAssigningBooking] = useState<Booking | null>(
     null,
   );
   const [awbInput, setAwbInput] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
+
+  const selectedFranchiseName =
+    franchiseFilter !== "all"
+      ? (franchises.find((f) => f.username === franchiseFilter)
+          ?.franchiseName ?? franchiseFilter)
+      : undefined;
 
   const filteredBookings = bookings.filter((b) => {
     const matchesFilter =
@@ -315,7 +332,9 @@ export function AdminBookings() {
       b.destinationCountry.toLowerCase().includes(search.toLowerCase()) ||
       (b.awbNumber?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
       b.bookingId.toString().includes(search);
-    return matchesFilter && matchesSearch;
+    const matchesFranchise =
+      franchiseFilter === "all" || b.createdBy === franchiseFilter;
+    return matchesFilter && matchesSearch && matchesFranchise;
   });
 
   const handleAssign = async () => {
@@ -348,15 +367,28 @@ export function AdminBookings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">All Bookings</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Manage and track all shipment bookings
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display text-2xl font-bold">All Bookings</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage and track all shipment bookings
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() =>
+            exportBookingsToCSV(filteredBookings, selectedFranchiseName)
+          }
+          disabled={filteredBookings.length === 0}
+          data-ocid="bookings.download_button"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download Excel
+        </Button>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-48 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name, AWB, destination..."
@@ -366,6 +398,20 @@ export function AdminBookings() {
             data-ocid="bookings.search_input"
           />
         </div>
+        <Select value={franchiseFilter} onValueChange={setFranchiseFilter}>
+          <SelectTrigger className="w-48" data-ocid="bookings.franchise.select">
+            <SelectValue placeholder="All Franchises" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Franchises</SelectItem>
+            <SelectItem value="admin">Admin (direct)</SelectItem>
+            {franchises.map((f) => (
+              <SelectItem key={f.franchiseId} value={f.username}>
+                {f.franchiseName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs value={filter} onValueChange={setFilter}>
