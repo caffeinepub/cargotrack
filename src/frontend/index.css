@@ -83,6 +83,13 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
+  /* Ensure all inputs always render typed text in the foreground color */
+  input,
+  textarea,
+  select {
+    color: oklch(var(--foreground));
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
   }

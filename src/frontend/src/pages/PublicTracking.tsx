@@ -47,8 +47,8 @@ function Globe3D() {
       <mesh ref={meshRef}>
         <sphereGeometry args={[1.8, 32, 32]} />
         <meshPhongMaterial
-          color="#1a3a6e"
-          emissive="#0d2555"
+          color="#0a1628"
+          emissive="#050e1e"
           emissiveIntensity={0.4}
           transparent
           opacity={0.9}
@@ -59,17 +59,17 @@ function Globe3D() {
       <mesh ref={wireRef}>
         <sphereGeometry args={[1.82, 20, 20]} />
         <meshBasicMaterial
-          color="#4a90d9"
+          color="#00d4aa"
           wireframe
           transparent
-          opacity={0.22}
+          opacity={0.35}
         />
       </mesh>
       {/* Outer glow ring */}
       <mesh>
         <sphereGeometry args={[1.95, 32, 32]} />
         <meshBasicMaterial
-          color="#2060c0"
+          color="#00b894"
           transparent
           opacity={0.06}
           side={THREE.BackSide}
@@ -153,8 +153,8 @@ function CargoPlaneMesh() {
       <mesh>
         <cylinderGeometry args={[0.03, 0.04, 0.25, 8]} />
         <meshPhongMaterial
-          color="#e8f0ff"
-          emissive="#4a90d9"
+          color="#e8fff8"
+          emissive="#00d4aa"
           emissiveIntensity={0.5}
         />
       </mesh>
@@ -162,8 +162,8 @@ function CargoPlaneMesh() {
       <mesh position={[0.12, 0, -0.02]} rotation={[0, 0, -0.1]}>
         <boxGeometry args={[0.22, 0.015, 0.06]} />
         <meshPhongMaterial
-          color="#c8d8f0"
-          emissive="#3a7abf"
+          color="#c8f0e8"
+          emissive="#00b894"
           emissiveIntensity={0.4}
         />
       </mesh>
@@ -171,8 +171,8 @@ function CargoPlaneMesh() {
       <mesh position={[-0.12, 0, -0.02]} rotation={[0, 0, 0.1]}>
         <boxGeometry args={[0.22, 0.015, 0.06]} />
         <meshPhongMaterial
-          color="#c8d8f0"
-          emissive="#3a7abf"
+          color="#c8f0e8"
+          emissive="#00b894"
           emissiveIntensity={0.4}
         />
       </mesh>
@@ -233,8 +233,8 @@ function CargoShipMesh() {
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[0.38, 0.06, 0.14]} />
         <meshPhongMaterial
-          color="#2a5298"
-          emissive="#1a3a78"
+          color="#1a2a3a"
+          emissive="#0d1a26"
           emissiveIntensity={0.4}
         />
       </mesh>
@@ -242,8 +242,8 @@ function CargoShipMesh() {
       <mesh position={[0.08, 0.065, 0]}>
         <boxGeometry args={[0.09, 0.07, 0.1]} />
         <meshPhongMaterial
-          color="#3a6ac0"
-          emissive="#2050a0"
+          color="#00b894"
+          emissive="#008a70"
           emissiveIntensity={0.3}
         />
       </mesh>
@@ -269,15 +269,15 @@ function CargoShipMesh() {
       <mesh position={[-0.22, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <coneGeometry args={[0.04, 0.08, 6]} />
         <meshPhongMaterial
-          color="#1a3a78"
-          emissive="#0d2555"
+          color="#0d1a26"
+          emissive="#060e18"
           emissiveIntensity={0.3}
         />
       </mesh>
       {/* Wake glow */}
       <mesh position={[0.22, -0.02, 0]}>
         <sphereGeometry args={[0.025, 6, 6]} />
-        <meshBasicMaterial color="#7ab0e8" transparent opacity={0.7} />
+        <meshBasicMaterial color="#00d4aa" transparent opacity={0.7} />
       </mesh>
     </group>
   );
@@ -337,7 +337,7 @@ function CargoBoxMesh() {
       {/* Glow dot */}
       <mesh position={[0.08, 0.07, 0]}>
         <sphereGeometry args={[0.012, 6, 6]} />
-        <meshBasicMaterial color="#4a90d9" transparent opacity={0.8} />
+        <meshBasicMaterial color="#00d4aa" transparent opacity={0.8} />
       </mesh>
     </group>
   );
@@ -377,7 +377,7 @@ function FloatingParticles() {
         <bufferAttribute attach="attributes-size" args={[sizes, 1]} />
       </bufferGeometry>
       <pointsMaterial
-        color="#7ab0e8"
+        color="#00d4aa"
         size={0.04}
         transparent
         opacity={0.6}
@@ -428,7 +428,7 @@ function RouteArc({
   const lineObject = useMemo(() => {
     const geo = new THREE.BufferGeometry().setFromPoints(points);
     const mat = new THREE.LineBasicMaterial({
-      color: "#4a90d9",
+      color: "#00d4aa",
       transparent: true,
       opacity: 0.45,
     });
@@ -460,7 +460,7 @@ function OrbitalRing() {
     <mesh ref={ringRef} rotation={[Math.PI / 3, 0, 0]}>
       <ringGeometry args={[2.4, 2.44, 64]} />
       <meshBasicMaterial
-        color="#4a90d9"
+        color="#00d4aa"
         transparent
         opacity={0.15}
         side={THREE.DoubleSide}
@@ -474,17 +474,17 @@ function Scene3D() {
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.6} color="#3a6ec0" />
-      <pointLight position={[5, 5, 5]} intensity={2.5} color="#6aaef0" />
+      <ambientLight intensity={0.6} color="#001a14" />
+      <pointLight position={[5, 5, 5]} intensity={3} color="#00d4aa" />
       <pointLight position={[-5, -3, -5]} intensity={1.2} color="#ffd166" />
       <directionalLight position={[3, 4, 2]} intensity={1.4} color="#ffffff" />
       {/* Background stars */}
       <Stars
         radius={80}
         depth={50}
-        count={3000}
+        count={4000}
         factor={3}
-        saturation={0}
+        saturation={0.3}
         fade
         speed={0.3}
       />
@@ -547,7 +547,7 @@ export function PublicTracking() {
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: "#12204a" }}
+      style={{ background: "#080c14" }}
     >
       {/* Staff Login — top right */}
       <div className="fixed top-0 right-0 z-50 p-4">
@@ -587,7 +587,7 @@ export function PublicTracking() {
             className="absolute inset-0 z-[1] pointer-events-none"
             style={{
               background:
-                "radial-gradient(ellipse 70% 60% at 50% 50%, transparent 20%, rgba(18,32,74,0.5) 70%, rgba(18,32,74,0.92) 100%)",
+                "radial-gradient(ellipse 70% 60% at 50% 50%, transparent 20%, rgba(8,12,20,0.5) 70%, rgba(8,12,20,0.92) 100%)",
             }}
           />
 
@@ -595,7 +595,7 @@ export function PublicTracking() {
           <div
             className="absolute bottom-0 left-0 right-0 h-40 z-[1] pointer-events-none"
             style={{
-              background: "linear-gradient(to bottom, transparent, #12204a)",
+              background: "linear-gradient(to bottom, transparent, #080c14)",
             }}
           />
 
@@ -609,13 +609,12 @@ export function PublicTracking() {
               className="flex justify-center mb-8"
             >
               <img
-                src="/assets/20260305_152357_0000.png"
+                src="/assets/uploads/20260305_152357_0000-removebg-preview-1.png"
                 alt="Worldyfly Logistics"
                 className="h-16 w-auto object-contain"
                 style={{
-                  mixBlendMode: "screen",
                   filter:
-                    "drop-shadow(0 0 16px rgba(100,160,255,0.5)) brightness(1.15) contrast(1.05)",
+                    "brightness(0) invert(1) drop-shadow(0 0 20px rgba(0,212,170,0.5))",
                 }}
               />
             </motion.div>
@@ -627,9 +626,9 @@ export function PublicTracking() {
               transition={{ delay: 0.2, duration: 0.45 }}
               className="inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-widest mb-6 backdrop-blur-sm"
               style={{
-                borderColor: "rgba(74,144,217,0.4)",
-                background: "rgba(74,144,217,0.12)",
-                color: "#7ab0e8",
+                borderColor: "rgba(0,212,170,0.4)",
+                background: "rgba(0,212,170,0.12)",
+                color: "#00d4aa",
               }}
             >
               <Globe className="h-3 w-3" />
@@ -646,14 +645,14 @@ export function PublicTracking() {
               Track Your Shipment{" "}
               <span
                 className="relative inline-block"
-                style={{ color: "#7ab0e8" }}
+                style={{ color: "#00d4aa" }}
               >
                 Worldwide
                 <span
                   className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
                   style={{
                     background:
-                      "linear-gradient(to right, #4a90d9, rgba(74,144,217,0.5), transparent)",
+                      "linear-gradient(to right, #00d4aa, rgba(0,212,170,0.5), transparent)",
                   }}
                   aria-hidden="true"
                 />
@@ -686,14 +685,14 @@ export function PublicTracking() {
                 WebkitBackdropFilter: "blur(20px)",
                 border: "1px solid rgba(255,255,255,0.12)",
                 boxShadow:
-                  "0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(74,144,217,0.1), inset 0 1px 0 rgba(255,255,255,0.08)",
+                  "0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,170,0.1), inset 0 1px 0 rgba(255,255,255,0.08)",
               }}
             >
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Search
                     className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none"
-                    style={{ color: "rgba(74,144,217,0.7)" }}
+                    style={{ color: "rgba(0,212,170,0.7)" }}
                   />
                   <Input
                     value={inputValue}
@@ -710,9 +709,9 @@ export function PublicTracking() {
                   disabled={isLoading || !inputValue.trim()}
                   className="h-12 px-7 rounded-xl font-semibold text-base flex-shrink-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   style={{
-                    background: "linear-gradient(135deg, #1a4fa0, #4a90d9)",
+                    background: "linear-gradient(135deg, #007a60, #00d4aa)",
                     color: "#ffffff",
-                    boxShadow: "0 4px 16px rgba(74,144,217,0.4)",
+                    boxShadow: "0 4px 16px rgba(0,212,170,0.4)",
                     border: "none",
                   }}
                   data-ocid="tracking.primary_button"
@@ -748,7 +747,7 @@ export function PublicTracking() {
                 >
                   <Icon
                     className="h-3.5 w-3.5"
-                    style={{ color: "rgba(74,144,217,0.7)" }}
+                    style={{ color: "rgba(0,212,170,0.7)" }}
                   />
                   <span>{label}</span>
                 </div>
@@ -760,7 +759,7 @@ export function PublicTracking() {
         {/* ─── RESULTS ──────────────────────────────────────────────────────── */}
         <section
           className="max-w-3xl mx-auto px-4 py-14 relative"
-          style={{ background: "#12204a" }}
+          style={{ background: "#080c14" }}
         >
           <AnimatePresence mode="wait">
             {isLoading && (
@@ -775,16 +774,16 @@ export function PublicTracking() {
                 <div className="relative">
                   <div
                     className="h-16 w-16 rounded-full border-2 flex items-center justify-center"
-                    style={{ borderColor: "rgba(74,144,217,0.2)" }}
+                    style={{ borderColor: "rgba(0,212,170,0.2)" }}
                   >
                     <Loader2
                       className="h-7 w-7 animate-spin"
-                      style={{ color: "#4a90d9" }}
+                      style={{ color: "#00d4aa" }}
                     />
                   </div>
                   <div
                     className="absolute inset-0 rounded-full border-2 animate-ping"
-                    style={{ borderColor: "rgba(74,144,217,0.1)" }}
+                    style={{ borderColor: "rgba(0,212,170,0.1)" }}
                   />
                 </div>
                 <p
@@ -863,7 +862,7 @@ export function PublicTracking() {
                     <a
                       href="tel:+919526369141"
                       className="hover:underline"
-                      style={{ color: "#4a90d9" }}
+                      style={{ color: "#00d4aa" }}
                     >
                       +91 95263 69141
                     </a>
@@ -890,10 +889,10 @@ export function PublicTracking() {
                   className="rounded-2xl overflow-hidden"
                   style={{
                     background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(74,144,217,0.25)",
-                    borderLeft: "4px solid #4a90d9",
+                    border: "1px solid rgba(0,212,170,0.25)",
+                    borderLeft: "4px solid #00d4aa",
                     backdropFilter: "blur(10px)",
-                    boxShadow: "0 0 30px rgba(74,144,217,0.08)",
+                    boxShadow: "0 0 30px rgba(0,212,170,0.08)",
                   }}
                 >
                   <div className="p-6">
@@ -903,7 +902,7 @@ export function PublicTracking() {
                         <div>
                           <p
                             className="text-[10px] font-semibold uppercase tracking-widest mb-2"
-                            style={{ color: "rgba(122,176,232,0.85)" }}
+                            style={{ color: "rgba(0,212,170,0.85)" }}
                           >
                             AWB Number
                           </p>
@@ -911,13 +910,13 @@ export function PublicTracking() {
                           <div
                             className="inline-block rounded-lg px-4 py-2 overflow-hidden relative"
                             style={{
-                              background: "rgba(74,144,217,0.1)",
-                              border: "1px solid rgba(74,144,217,0.25)",
+                              background: "rgba(0,212,170,0.1)",
+                              border: "1px solid rgba(0,212,170,0.25)",
                             }}
                           >
                             <span
                               className="font-mono text-2xl font-bold tracking-wide"
-                              style={{ color: "#7ab0e8" }}
+                              style={{ color: "#00d4aa" }}
                             >
                               {booking.awbNumber}
                             </span>
@@ -926,7 +925,7 @@ export function PublicTracking() {
                               className="absolute inset-0 pointer-events-none"
                               style={{
                                 background:
-                                  "linear-gradient(105deg, transparent 40%, rgba(74,144,217,0.18) 50%, transparent 60%)",
+                                  "linear-gradient(105deg, transparent 40%, rgba(0,212,170,0.18) 50%, transparent 60%)",
                               }}
                               animate={{ x: ["-100%", "100%"] }}
                               transition={{
@@ -950,7 +949,7 @@ export function PublicTracking() {
                           >
                             <MapPin
                               className="h-3.5 w-3.5 flex-shrink-0"
-                              style={{ color: "#4a90d9" }}
+                              style={{ color: "#00d4aa" }}
                             />
                             <span className="text-sm font-semibold text-white">
                               {booking.originCountry}
@@ -960,7 +959,7 @@ export function PublicTracking() {
                           {/* Animated dashed line */}
                           <div
                             className="flex items-center gap-1"
-                            style={{ color: "rgba(74,144,217,0.5)" }}
+                            style={{ color: "rgba(0,212,170,0.5)" }}
                           >
                             <motion.div
                               className="flex items-center gap-0.5"
@@ -973,12 +972,12 @@ export function PublicTracking() {
                             >
                               <div
                                 className="h-px w-3"
-                                style={{ background: "rgba(74,144,217,0.5)" }}
+                                style={{ background: "rgba(0,212,170,0.5)" }}
                               />
                               <span className="text-sm">✈️</span>
                               <div
                                 className="h-px w-3"
-                                style={{ background: "rgba(74,144,217,0.5)" }}
+                                style={{ background: "rgba(0,212,170,0.5)" }}
                               />
                             </motion.div>
                           </div>
@@ -986,13 +985,13 @@ export function PublicTracking() {
                           <div
                             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5"
                             style={{
-                              background: "rgba(74,144,217,0.08)",
-                              border: "1px solid rgba(74,144,217,0.25)",
+                              background: "rgba(0,212,170,0.08)",
+                              border: "1px solid rgba(0,212,170,0.25)",
                             }}
                           >
                             <Globe
                               className="h-3.5 w-3.5 flex-shrink-0"
-                              style={{ color: "#4a90d9" }}
+                              style={{ color: "#00d4aa" }}
                             />
                             <span className="text-sm font-semibold text-white">
                               {booking.destinationCountry}
@@ -1005,7 +1004,7 @@ export function PublicTracking() {
                       <div
                         className="rounded-xl"
                         style={{
-                          filter: "drop-shadow(0 0 8px rgba(74,144,217,0.3))",
+                          filter: "drop-shadow(0 0 8px rgba(0,212,170,0.3))",
                         }}
                       >
                         <StatusBadge
@@ -1032,7 +1031,7 @@ export function PublicTracking() {
                           <div className="flex items-center gap-2 mb-1.5">
                             <User
                               className="h-3.5 w-3.5 flex-shrink-0"
-                              style={{ color: "#4a90d9" }}
+                              style={{ color: "#00d4aa" }}
                             />
                             <p
                               className="text-[10px] font-semibold uppercase tracking-widest"
@@ -1057,7 +1056,7 @@ export function PublicTracking() {
                       >
                         <div
                           className="h-1.5 w-1.5 rounded-full flex-shrink-0"
-                          style={{ background: "rgba(74,144,217,0.7)" }}
+                          style={{ background: "rgba(0,212,170,0.7)" }}
                         />
                         <p
                           className="text-xs"
@@ -1105,13 +1104,13 @@ export function PublicTracking() {
                       <div
                         className="h-9 w-9 rounded-xl flex items-center justify-center"
                         style={{
-                          background: "rgba(74,144,217,0.1)",
-                          border: "1px solid rgba(74,144,217,0.22)",
+                          background: "rgba(0,212,170,0.1)",
+                          border: "1px solid rgba(0,212,170,0.22)",
                         }}
                       >
                         <Plane
                           className="h-4 w-4"
-                          style={{ color: "#4a90d9" }}
+                          style={{ color: "#00d4aa" }}
                         />
                       </div>
                     </div>
@@ -1160,15 +1159,9 @@ export function PublicTracking() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <img
-                src="/assets/20260305_152357_0000.png"
+                src="/assets/uploads/20260305_152357_0000-removebg-preview-1.png"
                 alt="Worldyfly Logistics"
-                className="h-8 w-auto object-contain"
-                style={{
-                  mixBlendMode: "screen",
-                  filter:
-                    "drop-shadow(0 0 8px rgba(255,255,255,0.5)) brightness(1.05)",
-                  opacity: 0.9,
-                }}
+                className="h-8 w-auto object-contain [filter:brightness(0)_invert(1)]"
               />
             </div>
 

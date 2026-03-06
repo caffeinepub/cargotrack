@@ -263,9 +263,7 @@ function InlineEditRow({
         />
       </TableCell>
       <TableCell>
-        <span className="text-sm text-muted-foreground font-mono">
-          {charge.currency}
-        </span>
+        <span className="text-sm text-muted-foreground font-mono">INR</span>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
@@ -445,7 +443,7 @@ function BookingDetailPanel({
   booking,
   isAdmin,
 }: { booking: Booking; isAdmin: boolean }) {
-  const currency = booking.invoice.currency;
+  const currency = "INR";
   const bookingId = booking.bookingId.toString();
   const franchiseId =
     booking.createdBy === "admin"
@@ -469,12 +467,12 @@ function BookingDetailPanel({
 
   const handleSaveNew = useCallback(
     (label: string, amount: number) => {
-      saveCharge({ bookingId, label, amount, currency });
+      saveCharge({ bookingId, label, amount, currency: "INR" });
       setNewRow(null);
       refreshCharges();
       toast.success("Charge added");
     },
-    [bookingId, currency, saveCharge, refreshCharges],
+    [bookingId, saveCharge, refreshCharges],
   );
 
   const handleSaveEdit = useCallback(

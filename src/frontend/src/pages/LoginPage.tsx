@@ -82,10 +82,9 @@ export function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <img
-            src="/assets/20260305_152357_0000.png"
+            src="/assets/uploads/20260305_152357_0000-removebg-preview-1.png"
             alt="Worldyfly Logistics"
-            className="h-20 w-auto object-contain mb-2 drop-shadow-lg"
-            style={{ mixBlendMode: "screen" }}
+            className="h-20 w-auto object-contain mb-2 [filter:brightness(0)_invert(1)]"
           />
           <p className="text-sidebar-foreground/60 text-sm mt-1">
             Cargo &amp; Courier Management

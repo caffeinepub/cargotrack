@@ -42,7 +42,8 @@ import type {
   Shipper,
 } from "../../backend.d";
 import { useCreateBooking } from "../../hooks/useLocalStore";
-import { COUNTRIES, HS_CODE_LIST } from "../../lib/constants";
+import { COUNTRIES } from "../../lib/constants";
+import HS_CODE_DATABASE from "../../lib/hsCodeDatabase";
 
 interface BoxFormRow {
   id: string;
@@ -210,10 +211,10 @@ export function NewBooking() {
         if (item.id !== id) return item;
         const updated = { ...item, [field]: value };
         if (field === "description") {
-          const match = HS_CODE_LIST.find(
+          const match = HS_CODE_DATABASE.find(
             (h) => h.description.toLowerCase() === value.toLowerCase(),
           );
-          if (match) updated.hsCode = match.hsCode;
+          if (match) updated.hsCode = match.code;
           updated.showSuggestions = value.length > 1;
         }
         return updated;
@@ -237,9 +238,11 @@ export function NewBooking() {
 
   const getHsSuggestions = (desc: string) => {
     if (!desc || desc.length < 2) return [];
-    return HS_CODE_LIST.filter((h) =>
-      h.description.toLowerCase().includes(desc.toLowerCase()),
-    ).slice(0, 6);
+    const lower = desc.toLowerCase();
+    return HS_CODE_DATABASE.filter(
+      (h) =>
+        h.description.toLowerCase().includes(lower) || h.code.includes(lower),
+    ).slice(0, 8);
   };
 
   const handleSubmit = async () => {
@@ -839,7 +842,7 @@ export function NewBooking() {
                                 150,
                               )
                             }
-                            className="h-8 text-sm"
+                            className="h-8 text-sm text-foreground"
                             data-ocid={`booking.item_description.input.${idx + 1}`}
                           />
                           <AnimatePresence>
@@ -852,20 +855,20 @@ export function NewBooking() {
                               >
                                 {suggestions.map((s) => (
                                   <button
-                                    key={s.hsCode}
+                                    key={s.code}
                                     type="button"
                                     className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-accent transition-colors text-left"
                                     onMouseDown={() =>
                                       handleSelectHsCode(
                                         item.id,
                                         s.description,
-                                        s.hsCode,
+                                        s.code,
                                       )
                                     }
                                   >
                                     <span>{s.description}</span>
                                     <span className="font-mono text-muted-foreground ml-2">
-                                      {s.hsCode}
+                                      {s.code}
                                     </span>
                                   </button>
                                 ))}
@@ -884,7 +887,7 @@ export function NewBooking() {
                                 e.target.value,
                               )
                             }
-                            className="h-8 text-sm font-mono"
+                            className="h-8 text-sm font-mono text-foreground"
                             data-ocid={`booking.item_hscode.input.${idx + 1}`}
                           />
                         </TableCell>
@@ -901,7 +904,7 @@ export function NewBooking() {
                                 e.target.value,
                               )
                             }
-                            className="h-8 text-sm"
+                            className="h-8 text-sm text-foreground"
                             data-ocid={`booking.item_qty.input.${idx + 1}`}
                           />
                         </TableCell>
@@ -915,7 +918,7 @@ export function NewBooking() {
                             onChange={(e) =>
                               handleItemChange(item.id, "rate", e.target.value)
                             }
-                            className="h-8 text-sm"
+                            className="h-8 text-sm text-foreground"
                             data-ocid={`booking.item_rate.input.${idx + 1}`}
                           />
                         </TableCell>

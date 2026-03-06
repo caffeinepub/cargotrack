@@ -243,7 +243,7 @@ export function AccountsInvoiceDocument({ booking }: Props) {
         {/* Left: Logo + Company Info */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
           <img
-            src="/assets/20260305_152357_0000.png"
+            src="/assets/uploads/20260305_152357_0000-removebg-preview-1.png"
             alt="Worldyfly Logo"
             style={{ height: "60px", objectFit: "contain" }}
           />

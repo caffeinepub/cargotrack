@@ -3,7 +3,7 @@ import { formatDate } from "../../lib/helpers";
 import { KYC_LABEL } from "../../lib/kycLabels";
 
 const COMPANY = {
-  name: "WORLDYFLY",
+  name: "WORLDYFLY LOGISTICS",
   tagline: "International Courier & Cargo Services",
   address1: "11/423H, Second Floor, St Joseph Building,",
   address2: "Akapparambu Junction, Opposite Cochin International Airport,",
@@ -75,21 +75,28 @@ function numberToWords(n: number): string {
   return `${result} ONLY`;
 }
 
-// Cell style helpers
-const cellStyle: React.CSSProperties = {
-  border: "1px solid #555",
-  padding: "4px 6px",
-  fontSize: "10px",
-  verticalAlign: "top",
+const tbl: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  border: "1px solid black",
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: "8px",
-  fontWeight: "700",
-  textTransform: "uppercase",
-  color: "#555",
+const td: React.CSSProperties = {
+  border: "1px solid black",
+  padding: "8px",
+  verticalAlign: "top",
+  fontSize: "10pt",
+};
+
+const label: React.CSSProperties = {
+  fontSize: "8pt",
+  fontWeight: "bold",
   display: "block",
-  marginBottom: "2px",
+  marginBottom: "4px",
+};
+
+const content: React.CSSProperties = {
+  fontSize: "9pt",
 };
 
 interface Props {
@@ -100,445 +107,325 @@ export function InvoiceDocument({ booking }: Props) {
   const grandTotal = booking.boxItems.reduce((s, i) => s + i.total, 0);
   const totalWeight = booking.boxes.reduce((s, b) => s + b.grossWeight, 0);
   const allDims = booking.boxes
-    .map((b) => `${b.length}×${b.width}×${b.height}`)
+    .map((b) => `${b.length}×${b.width}×${b.height} cm`)
     .join(", ");
   const invoiceDateStr = formatDate(booking.invoice.invoiceDate);
   const currency = booking.invoice.currency;
 
-  // Parse address for city/state/zip extraction (best-effort)
-  const shipperAddressParts = booking.shipper.address
-    .split(",")
-    .map((p) => p.trim());
-  const shipperCity = shipperAddressParts[shipperAddressParts.length - 2] ?? "";
-  const shipperState =
-    shipperAddressParts[shipperAddressParts.length - 1] ?? "";
-
-  const consigneeAddressParts = booking.consignee.address
-    .split(",")
-    .map((p) => p.trim());
-  const consigneeCity =
-    consigneeAddressParts[consigneeAddressParts.length - 2] ?? "";
+  const kycLabel =
+    KYC_LABEL[booking.shipper.kycType] ?? booking.shipper.kycType;
 
   return (
     <div
       style={{
-        fontFamily: "Arial, Helvetica, sans-serif",
-        color: "#111",
+        fontFamily: "Arial, sans-serif",
+        fontSize: "10pt",
+        margin: "20px",
+        color: "#000",
         background: "#fff",
-        padding: "20px",
         maxWidth: "900px",
-        margin: "0 auto",
-        fontSize: "11px",
+        marginLeft: "auto",
+        marginRight: "auto",
       }}
     >
-      {/* Company Header */}
+      {/* Company logo + address header */}
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "12px",
           marginBottom: "10px",
           paddingBottom: "8px",
-          borderBottom: "2px solid #111",
+          borderBottom: "2px solid #000",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <img
-            src="/assets/20260305_152357_0000.png"
-            alt="Worldyfly Logo"
-            style={{ height: "55px", objectFit: "contain" }}
-          />
-          <div>
-            <div
-              style={{
-                fontSize: "16px",
-                fontWeight: "800",
-                letterSpacing: "1px",
-              }}
-            >
-              {COMPANY.name}
-            </div>
-            <div style={{ fontSize: "9px", color: "#555" }}>
-              {COMPANY.tagline}
-            </div>
-            <div style={{ fontSize: "9px", color: "#555" }}>
-              {COMPANY.address1}
-            </div>
-            <div style={{ fontSize: "9px", color: "#555" }}>
-              {COMPANY.address2}
-            </div>
-            <div style={{ fontSize: "9px", color: "#555" }}>
-              {COMPANY.address3}
-            </div>
-            <div style={{ fontSize: "9px", color: "#555" }}>
-              Tel: {COMPANY.phone} | Email: {COMPANY.email}
-            </div>
-          </div>
-        </div>
-        <div style={{ textAlign: "center", marginTop: "6px" }}>
+        <img
+          src="/assets/uploads/20260305_152357_0000-removebg-preview-1.png"
+          alt="Worldyfly Logo"
+          style={{ height: "55px", objectFit: "contain" }}
+        />
+        <div>
           <div
             style={{
-              fontSize: "22px",
-              fontWeight: "900",
-              letterSpacing: "4px",
-              textDecoration: "underline",
+              fontSize: "14pt",
+              fontWeight: "bold",
+              letterSpacing: "1px",
             }}
           >
-            INVOICE
+            {COMPANY.name}
           </div>
-          <div style={{ fontSize: "9px", color: "#555", marginTop: "2px" }}>
-            COMMERCIAL INVOICE
+          <div style={{ fontSize: "8pt", color: "#444" }}>
+            {COMPANY.tagline}
+          </div>
+          <div style={{ fontSize: "8pt", color: "#444" }}>
+            {COMPANY.address1} {COMPANY.address2}
+          </div>
+          <div style={{ fontSize: "8pt", color: "#444" }}>
+            {COMPANY.address3}
+          </div>
+          <div style={{ fontSize: "8pt", color: "#444" }}>
+            Tel: {COMPANY.phone} | Email: {COMPANY.email} | {COMPANY.website}
           </div>
         </div>
       </div>
 
-      {/* Main bordered table */}
-      <table
+      {/* INVOICE title */}
+      <div
         style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          border: "1px solid #555",
+          textAlign: "center",
+          fontWeight: "bold",
+          fontSize: "14pt",
+          padding: "10px",
+          borderBottom: "none",
+          border: "1px solid black",
+          borderBottomColor: "transparent",
+          background: "#f9f9f9",
+          letterSpacing: "4px",
         }}
       >
+        INVOICE
+      </div>
+
+      {/* Table 1: Exporter / Consignee / Invoice info */}
+      <table style={tbl}>
         <tbody>
-          {/* Row 1: Exporter | Invoice No + Date | Exporter Ref */}
+          {/* Row 1: Exporter | Invoice No & Date | Exporter Ref */}
           <tr>
             <td
-              rowSpan={3}
-              style={{
-                ...cellStyle,
-                width: "38%",
-                borderRight: "1px solid #555",
-              }}
+              width="50%"
+              rowSpan={2}
+              style={{ ...td, borderRight: "1px solid black" }}
             >
-              <span style={labelStyle}>Exporter</span>
-              <div
-                style={{
-                  fontWeight: "700",
-                  fontSize: "12px",
-                  marginBottom: "4px",
-                }}
-              >
-                {booking.shipper.name}
-              </div>
-              <div style={{ whiteSpace: "pre-line", lineHeight: "1.5" }}>
+              <span style={label}>Exporter</span>
+              <div style={content}>
+                <strong>{booking.shipper.name.toUpperCase()}</strong>
+                <br />
                 {booking.shipper.address}
-              </div>
-              {shipperCity && (
-                <div>
-                  {shipperCity}
-                  {shipperState ? `, ${shipperState}` : ""}
-                </div>
-              )}
-              <div style={{ marginTop: "4px" }}>
-                <strong>
-                  {KYC_LABEL[booking.shipper.kycType] ??
-                    booking.shipper.kycType}{" "}
-                  Number-{booking.shipper.kycNumber}
-                </strong>
+                <br />
+                Tel: {booking.shipper.phone}
+                <br />
+                {kycLabel} Number-{booking.shipper.kycNumber}
               </div>
             </td>
-            <td
-              style={{
-                ...cellStyle,
-                width: "38%",
-                borderRight: "1px solid #555",
-              }}
-            >
-              <span style={labelStyle}>Invoice No. and Date</span>
-              <div style={{ fontWeight: "700" }}>
+            <td width="25%" style={{ ...td, borderRight: "1px solid black" }}>
+              <span style={label}>Invoice No. and Date</span>
+              <div style={content}>
                 {booking.invoice.invoiceNumber} &nbsp;&nbsp; {invoiceDateStr}
               </div>
             </td>
-            <td style={{ ...cellStyle, width: "24%" }}>
-              <span style={labelStyle}>Exporter Ref.</span>
-              <div>{booking.awbNumber ?? "—"}</div>
+            <td width="25%" style={td}>
+              <span style={label}>Exporter Ref.</span>
+              <div style={content}>{booking.awbNumber ?? "—"}</div>
             </td>
           </tr>
           <tr>
-            <td
-              colSpan={2}
-              style={{
-                ...cellStyle,
-                borderLeft: "1px solid #555",
-              }}
-            >
-              <span style={labelStyle}>Buyer's order no. and date</span>
-              <div style={{ minHeight: "16px" }}>&nbsp;</div>
-            </td>
-          </tr>
-          <tr>
-            <td
-              colSpan={2}
-              style={{
-                ...cellStyle,
-                borderLeft: "1px solid #555",
-              }}
-            >
-              <span style={labelStyle}>Other Reference (s)</span>
+            <td colSpan={2} style={{ ...td, borderLeft: "1px solid black" }}>
+              <span style={label}>Buyer's order no. and date</span>
               <div style={{ minHeight: "16px" }}>&nbsp;</div>
             </td>
           </tr>
 
-          {/* Row 2: Consignee | Buyer if other has consignee */}
+          {/* Row 2: Consignee | Buyer | Origin/Destination */}
           <tr>
             <td
+              width="50%"
               rowSpan={2}
-              style={{
-                ...cellStyle,
-                borderRight: "1px solid #555",
-                minHeight: "80px",
-              }}
+              style={{ ...td, borderRight: "1px solid black" }}
             >
-              <span style={labelStyle}>Consignee</span>
-              <div
-                style={{
-                  fontWeight: "700",
-                  fontSize: "12px",
-                  marginBottom: "4px",
-                }}
-              >
-                {booking.consignee.name}
-              </div>
-              <div style={{ whiteSpace: "pre-line", lineHeight: "1.5" }}>
+              <span style={label}>Consignee</span>
+              <div style={content}>
+                <strong>{booking.consignee.name.toUpperCase()}</strong>
+                <br />
                 {booking.consignee.address}
+                <br />
+                Telephone: {booking.consignee.phone}
               </div>
-              {consigneeCity && <div>{consigneeCity}</div>}
-              <div>Telephone: {booking.consignee.phone}</div>
             </td>
             <td
               colSpan={2}
-              style={{
-                ...cellStyle,
-                borderLeft: "1px solid #555",
-                height: "70px",
-              }}
+              style={{ ...td, borderLeft: "1px solid black", height: "70px" }}
             >
-              <span style={labelStyle}>Buyer(if other has consignee)</span>
+              <span style={label}>Buyer (if other than consignee)</span>
               <div style={{ minHeight: "50px" }}>&nbsp;</div>
             </td>
           </tr>
           <tr>
             <td
               style={{
-                ...cellStyle,
-                borderLeft: "1px solid #555",
-                borderRight: "1px solid #555",
-                width: "19%",
+                ...td,
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+                width: "25%",
               }}
             >
-              <span style={labelStyle}>Country of origin of goods</span>
-              <div style={{ fontWeight: "600" }}>INDIA</div>
+              <span style={label}>Country of origin of goods</span>
+              <div style={content}>
+                <strong>INDIA</strong>
+              </div>
             </td>
-            <td style={{ ...cellStyle, width: "19%" }}>
-              <span style={labelStyle}>Country of final destination</span>
-              <div style={{ fontWeight: "600" }}>
-                {booking.destinationCountry}
+            <td style={{ ...td, width: "25%" }}>
+              <span style={label}>Country of final destination</span>
+              <div style={content}>
+                <strong>{booking.destinationCountry.toUpperCase()}</strong>
               </div>
             </td>
           </tr>
+        </tbody>
+      </table>
 
-          {/* Pre-carriage / Place of receipt / Terms */}
+      {/* Table 2: Shipment info */}
+      <table style={{ ...tbl, borderTop: "none" }}>
+        <tbody>
           <tr>
-            <td
-              style={{
-                ...cellStyle,
-                borderRight: "1px solid #555",
-                width: "19%",
-              }}
-            >
-              <span style={labelStyle}>Pre-Carriage by</span>
+            <td width="25%" style={{ ...td, borderRight: "1px solid black" }}>
+              <span style={label}>Pre-Carriage by</span>
               <div style={{ minHeight: "14px" }}>&nbsp;</div>
             </td>
-            <td
-              style={{
-                ...cellStyle,
-                borderRight: "1px solid #555",
-                width: "19%",
-              }}
-            >
-              <span style={labelStyle}>Place of Receipt by pre-carrier</span>
+            <td width="25%" style={{ ...td, borderRight: "1px solid black" }}>
+              <span style={label}>Place of Receipt</span>
               <div style={{ minHeight: "14px" }}>&nbsp;</div>
             </td>
-            <td colSpan={2} style={{ ...cellStyle }}>
-              <span style={labelStyle}>Terms of delivery &amp; Payment</span>
-              <div style={{ minHeight: "14px" }}>&nbsp;</div>
-            </td>
-          </tr>
-
-          {/* Actual Weight / Vessel / Port / Dimension */}
-          <tr>
-            <td
-              colSpan={2}
-              style={{ ...cellStyle, borderRight: "1px solid #555" }}
-            >
-              <div style={{ display: "flex", gap: "32px" }}>
-                <div>
-                  <span style={labelStyle}>Actual Weight</span>
-                  <div style={{ fontWeight: "600" }}>
-                    {totalWeight.toFixed(2)} kg
-                  </div>
-                </div>
+            <td width="50%" colSpan={2} style={td}>
+              <span style={label}>Terms of delivery &amp; Payment</span>
+              <div style={content}>
+                Actual Weight: {totalWeight.toFixed(2)} kg
               </div>
             </td>
-            <td colSpan={2} style={{ ...cellStyle }}>
-              <span style={labelStyle}>Dimension</span>
-              <div>{allDims || "—"}</div>
-            </td>
           </tr>
-
-          {/* Vessel/Flight / Port of Loading */}
           <tr>
-            <td
-              style={{
-                ...cellStyle,
-                borderRight: "1px solid #555",
-                width: "19%",
-              }}
-            >
-              <span style={labelStyle}>Vessel / Flight No.</span>
+            <td style={{ ...td, borderRight: "1px solid black" }}>
+              <span style={label}>Vessel / Flight No.</span>
               <div style={{ minHeight: "14px" }}>&nbsp;</div>
             </td>
-            <td
-              style={{
-                ...cellStyle,
-                borderRight: "1px solid #555",
-                width: "19%",
-              }}
-            >
-              <span style={labelStyle}>Port of Loading</span>
-              <div>{booking.originCountry}</div>
+            <td style={{ ...td, borderRight: "1px solid black" }}>
+              <span style={label}>Port of Loading</span>
+              <div style={content}>{booking.originCountry}</div>
             </td>
-            <td colSpan={2} style={{ ...cellStyle }}>
-              <span style={labelStyle}>Port of Discharge</span>
-              <div>{booking.destinationCountry}</div>
+            <td colSpan={2} style={td}>
+              <span style={label}>Dimension</span>
+              <div style={content}>{allDims || "—"}</div>
             </td>
           </tr>
+        </tbody>
+      </table>
 
-          {/* Items table header */}
+      {/* Table 3: Product items */}
+      <table
+        style={{
+          ...tbl,
+          borderTop: "none",
+        }}
+      >
+        <thead>
           <tr>
-            <td
-              style={{
-                ...cellStyle,
-                background: "#f0f0f0",
-                fontWeight: "700",
-                fontSize: "10px",
-                textAlign: "center",
-                width: "6%",
-                borderRight: "1px solid #555",
-              }}
-            >
-              BOX
-            </td>
-            <td
-              style={{
-                ...cellStyle,
-                background: "#f0f0f0",
-                fontWeight: "700",
-                fontSize: "10px",
-                borderRight: "1px solid #555",
-              }}
-            >
-              DESCRIPTION
-            </td>
-            <td
-              style={{
-                ...cellStyle,
-                background: "#f0f0f0",
-                fontWeight: "700",
-                fontSize: "10px",
-                textAlign: "center",
-                borderRight: "1px solid #555",
-                width: "10%",
-              }}
-            >
-              HSN
-            </td>
-            <td
-              style={{
-                ...cellStyle,
-                background: "#f0f0f0",
-                fontWeight: "700",
-                fontSize: "10px",
-                textAlign: "center",
-                borderRight: "1px solid #555",
-                width: "8%",
-              }}
-            >
-              QTY
-            </td>
-            <td
-              style={{
-                ...cellStyle,
-                background: "#f0f0f0",
-                fontWeight: "700",
-                fontSize: "10px",
-                textAlign: "right",
-                borderRight: "1px solid #555",
-                width: "10%",
-              }}
-            >
-              RATE
-            </td>
-            <td
-              style={{
-                ...cellStyle,
-                background: "#f0f0f0",
-                fontWeight: "700",
-                fontSize: "10px",
-                textAlign: "right",
-                width: "12%",
-              }}
-            >
-              AMOUNT({currency})
-            </td>
+            {[
+              { label: "BOX", width: "10%", align: "center" as const },
+              { label: "DESCRIPTION", width: "40%", align: "left" as const },
+              { label: "HSN", width: "15%", align: "center" as const },
+              { label: "QTY", width: "10%", align: "center" as const },
+              { label: "RATE", width: "10%", align: "right" as const },
+              {
+                label: `AMOUNT(${currency})`,
+                width: "15%",
+                align: "right" as const,
+              },
+            ].map((col) => (
+              <th
+                key={col.label}
+                style={{
+                  border: "1px solid black",
+                  fontSize: "8pt",
+                  background: "#f2f2f2",
+                  textAlign: col.align,
+                  padding: "6px 8px",
+                  width: col.width,
+                }}
+              >
+                {col.label}
+              </th>
+            ))}
           </tr>
-
-          {/* Items rows */}
+        </thead>
+        <tbody>
           {booking.boxItems.length > 0 ? (
             booking.boxItems.map((item, idx) => (
               <tr key={`${item.boxNumber.toString()}-${idx}`}>
                 <td
                   style={{
-                    ...cellStyle,
+                    borderLeft: "1px solid black",
+                    borderRight: "1px solid black",
+                    borderTop: "none",
+                    borderBottom: "none",
+                    padding: "6px 8px",
+                    fontSize: "9pt",
                     textAlign: "center",
-                    borderRight: "1px solid #555",
                   }}
                 >
                   {item.boxNumber.toString()}
                 </td>
-                <td style={{ ...cellStyle, borderRight: "1px solid #555" }}>
+                <td
+                  style={{
+                    borderLeft: "1px solid black",
+                    borderRight: "1px solid black",
+                    borderTop: "none",
+                    borderBottom: "none",
+                    padding: "6px 8px",
+                    fontSize: "9pt",
+                  }}
+                >
                   {item.description}
                 </td>
                 <td
                   style={{
-                    ...cellStyle,
-                    fontFamily: "monospace",
+                    borderLeft: "1px solid black",
+                    borderRight: "1px solid black",
+                    borderTop: "none",
+                    borderBottom: "none",
+                    padding: "6px 8px",
+                    fontSize: "9pt",
                     textAlign: "center",
-                    borderRight: "1px solid #555",
+                    fontFamily: "monospace",
                   }}
                 >
                   {item.hsCode}
                 </td>
                 <td
                   style={{
-                    ...cellStyle,
+                    borderLeft: "1px solid black",
+                    borderRight: "1px solid black",
+                    borderTop: "none",
+                    borderBottom: "none",
+                    padding: "6px 8px",
+                    fontSize: "9pt",
                     textAlign: "center",
-                    borderRight: "1px solid #555",
                   }}
                 >
                   {item.quantity.toString()}
                 </td>
                 <td
                   style={{
-                    ...cellStyle,
+                    borderLeft: "1px solid black",
+                    borderRight: "1px solid black",
+                    borderTop: "none",
+                    borderBottom: "none",
+                    padding: "6px 8px",
+                    fontSize: "9pt",
                     textAlign: "right",
-                    borderRight: "1px solid #555",
                   }}
                 >
                   {item.rate.toFixed(2)}
                 </td>
-                <td style={{ ...cellStyle, textAlign: "right" }}>
+                <td
+                  style={{
+                    borderLeft: "1px solid black",
+                    borderRight: "1px solid black",
+                    borderTop: "none",
+                    borderBottom: "none",
+                    padding: "6px 8px",
+                    fontSize: "9pt",
+                    textAlign: "right",
+                  }}
+                >
                   {item.total.toFixed(2)}
                 </td>
               </tr>
@@ -548,96 +435,88 @@ export function InvoiceDocument({ booking }: Props) {
               <td
                 colSpan={6}
                 style={{
-                  ...cellStyle,
-                  height: "80px",
+                  border: "1px solid black",
+                  padding: "40px",
                   textAlign: "center",
                   color: "#aaa",
+                  fontSize: "9pt",
+                  height: "80px",
                 }}
               >
                 No items
               </td>
             </tr>
           )}
-
-          {/* Total row */}
+        </tbody>
+        {/* Total row */}
+        <tfoot>
           <tr>
             <td
               colSpan={5}
               style={{
-                ...cellStyle,
+                borderTop: "1px solid black",
+                borderBottom: "1px solid black",
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+                padding: "6px 8px",
+                fontWeight: "bold",
+                fontSize: "10pt",
                 textAlign: "right",
-                fontWeight: "700",
-                borderRight: "1px solid #555",
               }}
             >
               Total &nbsp; {currency}
             </td>
             <td
               style={{
-                ...cellStyle,
+                borderTop: "1px solid black",
+                borderBottom: "1px solid black",
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+                padding: "6px 8px",
+                fontWeight: "bold",
+                fontSize: "10pt",
                 textAlign: "right",
-                fontWeight: "700",
-                fontSize: "12px",
               }}
             >
               {grandTotal.toFixed(2)}
             </td>
           </tr>
+        </tfoot>
+      </table>
 
-          {/* Amount in words */}
+      {/* Table 4: Amount in words + Declaration */}
+      <table style={{ ...tbl, borderTop: "none" }}>
+        <tbody>
           <tr>
-            <td colSpan={6} style={{ ...cellStyle }}>
-              <span style={labelStyle}>Amount chargeable (in Words):</span>
-              <div>
+            <td colSpan={2} style={td}>
+              <span style={label}>Amount chargeable (in Words):</span>
+              <div style={content}>
                 <strong>{currency}</strong> &nbsp; {numberToWords(grandTotal)}
               </div>
             </td>
           </tr>
-
-          {/* Declaration + Signature */}
           <tr>
             <td
-              colSpan={4}
+              width="70%"
               style={{
-                ...cellStyle,
-                borderRight: "1px solid #555",
-                verticalAlign: "top",
+                ...td,
+                borderRight: "1px solid black",
+                height: "80px",
               }}
             >
-              <span style={labelStyle}>Declaration:</span>
-              <div style={{ fontSize: "9px", lineHeight: "1.5" }}>
+              <span style={label}>Declaration:</span>
+              <div style={{ fontSize: "9pt" }}>
                 The above mentioned items are not for commercial use and value
                 declared only for custom purpose.
               </div>
             </td>
-            <td
-              colSpan={2}
-              style={{
-                ...cellStyle,
-                verticalAlign: "top",
-                minHeight: "60px",
-              }}
-            >
-              <span style={labelStyle}>Signature / Date / Co stamp.</span>
-              <div style={{ marginTop: "6px", fontSize: "10px" }}>For</div>
-              <div style={{ minHeight: "40px" }}>&nbsp;</div>
+            <td width="30%" style={{ ...td, height: "80px" }}>
+              <span style={label}>Signature / Date / Co stamp.</span>
+              <div style={{ marginTop: "6px", fontSize: "10pt" }}>For</div>
             </td>
           </tr>
         </tbody>
       </table>
-
-      {/* Footer */}
-      <div
-        style={{
-          marginTop: "8px",
-          textAlign: "center",
-          fontSize: "8px",
-          color: "#aaa",
-        }}
-      >
-        {COMPANY.name} — {COMPANY.address1} {COMPANY.address2}{" "}
-        {COMPANY.address3} | Tel: {COMPANY.phone} | {COMPANY.website}
-      </div>
     </div>
   );
 }
