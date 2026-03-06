@@ -20,18 +20,20 @@ import {
   Navigation,
   Package,
   PlusCircle,
+  Settings,
   Users,
   Wallet,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { BookingStatus } from "../backend.d";
-import { useLocalSession } from "../hooks/useLocalStore";
+import { useLocalSession, useTheme } from "../hooks/useLocalStore";
 import { getAllBookings } from "../lib/store";
 
 export function AdminLayout() {
   const { isAuthenticated, isAdmin, logout } = useLocalSession();
   const navigate = useNavigate();
   const location = useLocation();
+  useTheme(); // Apply theme on mount
 
   // Count pending bookings for badge
   const pendingCount = useMemo(() => {
@@ -64,6 +66,7 @@ export function AdminLayout() {
     { label: "Tracking", to: "/admin/tracking", icon: Navigation },
     { label: "Franchises", to: "/admin/franchises", icon: Users },
     { label: "Accounts", to: "/admin/accounts", icon: Wallet },
+    { label: "Settings", to: "/admin/settings", icon: Settings },
   ];
 
   if (!isAuthenticated || !isAdmin) return null;

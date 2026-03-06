@@ -13,6 +13,7 @@ import { AccountsPage } from "./pages/AccountsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PrintPage } from "./pages/PrintPage";
 import { PublicTracking } from "./pages/PublicTracking";
+import { SettingsPage } from "./pages/SettingsPage";
 import { AdminBookings } from "./pages/admin/AdminBookings";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminFranchises } from "./pages/admin/AdminFranchises";
@@ -96,6 +97,12 @@ const adminAccountsRoute = createRoute({
   component: AccountsPage,
 });
 
+const adminSettingsRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: "/settings",
+  component: SettingsPage,
+});
+
 // Franchise layout route
 const franchiseLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -125,6 +132,12 @@ const franchiseAccountsRoute = createRoute({
   getParentRoute: () => franchiseLayoutRoute,
   path: "/accounts",
   component: AccountsPage,
+});
+
+const franchiseSettingsRoute = createRoute({
+  getParentRoute: () => franchiseLayoutRoute,
+  path: "/settings",
+  component: SettingsPage,
 });
 
 // Print routes (no layout, standalone pages)
@@ -167,12 +180,14 @@ const routeTree = rootRoute.addChildren([
     adminTrackingRoute,
     adminFranchisesRoute,
     adminAccountsRoute,
+    adminSettingsRoute,
   ]),
   franchiseLayoutRoute.addChildren([
     franchiseDashboardRoute,
     franchiseNewBookingRoute,
     franchiseBookingsRoute,
     franchiseAccountsRoute,
+    franchiseSettingsRoute,
   ]),
 ]);
 

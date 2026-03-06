@@ -32,6 +32,7 @@ export const STORAGE_KEYS = {
   PAYMENTS: "cargotrack_payments",
   EXPENSES: "cargotrack_expenses",
   INCOME: "cargotrack_income",
+  THEME: "cargotrack_theme",
 } as const;
 
 // ─── Session ─────────────────────────────────────────────────────────────────
@@ -273,20 +274,32 @@ export function storedToFranchise(
   };
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ─── Theme ────────────────────────────────────────────────────────────────────
 
-const ADMIN_CREDENTIALS = { username: "admin", password: "admin123" };
+export function getTheme(): "light" | "dark" | "system" {
+  const raw = localStorage.getItem(STORAGE_KEYS.THEME);
+  if (raw === "light" || raw === "dark" || raw === "system") return raw;
+  return "system";
+}
+
+export function setTheme(theme: "light" | "dark" | "system"): void {
+  localStorage.setItem(STORAGE_KEYS.THEME, theme);
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export function authenticate(
   username: string,
   password: string,
 ): Session | null {
-  // Check admin
-  if (
-    username === ADMIN_CREDENTIALS.username &&
-    password === ADMIN_CREDENTIALS.password
-  ) {
-    return { role: "admin", userId: "admin", username: "admin" };
+  // Check admin — credentials may have been changed by user
+  const adminUsername =
+    localStorage.getItem("cargotrack_admin_username") ?? "admin";
+  const adminPassword =
+    localStorage.getItem("cargotrack_admin_password") ?? "admin123";
+
+  if (username === adminUsername && password === adminPassword) {
+    return { role: "admin", userId: "admin", username: adminUsername };
   }
 
   // Check franchises
@@ -304,6 +317,73 @@ export function authenticate(
   }
 
   return null;
+}
+
+// ─── Credential Change ────────────────────────────────────────────────────────
+
+export function changeAdminPassword(
+  currentPassword: string,
+  newPassword: string,
+): boolean {
+  const stored =
+    localStorage.getItem("cargotrack_admin_password") ?? "admin123";
+  if (currentPassword !== stored) return false;
+  localStorage.setItem("cargotrack_admin_password", newPassword);
+  return true;
+}
+
+export function changeAdminUsername(
+  currentUsername: string,
+  newUsername: string,
+): boolean {
+  const stored = localStorage.getItem("cargotrack_admin_username") ?? "admin";
+  if (currentUsername !== stored) return false;
+  localStorage.setItem("cargotrack_admin_username", newUsername);
+  // Update session username
+  const session = getSession();
+  if (session && session.role === "admin") {
+    setSession({ ...session, username: newUsername });
+  }
+  return true;
+}
+
+export function changeFranchisePassword(
+  franchiseId: string,
+  currentPassword: string,
+  newPassword: string,
+): boolean {
+  const all = readFranchises();
+  const idx = all.findIndex((f) => f.franchiseId === franchiseId);
+  if (idx === -1) return false;
+  if (all[idx].password !== currentPassword) return false;
+  all[idx] = { ...all[idx], password: newPassword };
+  writeFranchises(all);
+  return true;
+}
+
+export function changeFranchiseUsername(
+  franchiseId: string,
+  currentUsername: string,
+  newUsername: string,
+): boolean {
+  const all = readFranchises();
+  const idx = all.findIndex((f) => f.franchiseId === franchiseId);
+  if (idx === -1) return false;
+  if (all[idx].username !== currentUsername) return false;
+  // Check uniqueness
+  if (all.some((f, i) => i !== idx && f.username === newUsername)) return false;
+  all[idx] = { ...all[idx], username: newUsername };
+  writeFranchises(all);
+  // Update session
+  const session = getSession();
+  if (
+    session &&
+    session.role === "franchise" &&
+    session.userId === franchiseId
+  ) {
+    setSession({ ...session, username: newUsername });
+  }
+  return true;
 }
 
 // ─── Booking CRUD ─────────────────────────────────────────────────────────────

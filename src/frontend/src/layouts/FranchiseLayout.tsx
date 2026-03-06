@@ -13,15 +13,16 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LogOut, Package, PlusCircle, Wallet } from "lucide-react";
+import { LogOut, Package, PlusCircle, Settings, Wallet } from "lucide-react";
 import { useEffect } from "react";
-import { useLocalSession } from "../hooks/useLocalStore";
+import { useLocalSession, useTheme } from "../hooks/useLocalStore";
 
 export function FranchiseLayout() {
   const { isAuthenticated, isAdmin, isFranchise, logout, session } =
     useLocalSession();
   const navigate = useNavigate();
   const location = useLocation();
+  useTheme(); // Apply theme on mount
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -40,6 +41,7 @@ export function FranchiseLayout() {
     { label: "New Booking", to: "/franchise/new-booking", icon: PlusCircle },
     { label: "My Bookings", to: "/franchise/bookings", icon: Package },
     { label: "Accounts", to: "/franchise/accounts", icon: Wallet },
+    { label: "Settings", to: "/franchise/settings", icon: Settings },
   ];
 
   if (!isAuthenticated || !isFranchise) return null;

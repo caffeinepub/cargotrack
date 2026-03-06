@@ -2,17 +2,6 @@ import type { Booking } from "../../backend.d";
 import { formatDate } from "../../lib/helpers";
 import { KYC_LABEL } from "../../lib/kycLabels";
 
-const COMPANY = {
-  name: "WORLDYFLY LOGISTICS",
-  tagline: "International Courier & Cargo Services",
-  address1: "11/423H, Second Floor, St Joseph Building,",
-  address2: "Akapparambu Junction, Opposite Cochin International Airport,",
-  address3: "Nedumbasserry - 686583, Kerala, India",
-  phone: "+91 95263 69141",
-  email: "info@worldyfly.com",
-  website: "www.worldyfly.com",
-};
-
 // Convert number to words (for amount in words line)
 function numberToWords(n: number): string {
   const ones = [
@@ -128,47 +117,6 @@ export function InvoiceDocument({ booking }: Props) {
         marginRight: "auto",
       }}
     >
-      {/* Company logo + address header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          marginBottom: "10px",
-          paddingBottom: "8px",
-          borderBottom: "2px solid #000",
-        }}
-      >
-        <img
-          src="/assets/uploads/20260305_152357_0000-removebg-preview-1.png"
-          alt="Worldyfly Logo"
-          style={{ height: "55px", objectFit: "contain" }}
-        />
-        <div>
-          <div
-            style={{
-              fontSize: "14pt",
-              fontWeight: "bold",
-              letterSpacing: "1px",
-            }}
-          >
-            {COMPANY.name}
-          </div>
-          <div style={{ fontSize: "8pt", color: "#444" }}>
-            {COMPANY.tagline}
-          </div>
-          <div style={{ fontSize: "8pt", color: "#444" }}>
-            {COMPANY.address1} {COMPANY.address2}
-          </div>
-          <div style={{ fontSize: "8pt", color: "#444" }}>
-            {COMPANY.address3}
-          </div>
-          <div style={{ fontSize: "8pt", color: "#444" }}>
-            Tel: {COMPANY.phone} | Email: {COMPANY.email} | {COMPANY.website}
-          </div>
-        </div>
-      </div>
-
       {/* INVOICE title */}
       <div
         style={{

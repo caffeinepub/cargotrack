@@ -35,6 +35,7 @@ import {
   getChargesByBooking,
   getPaymentsByBooking,
   getSession,
+  getTheme,
   getTrackingByAWB,
   setSession,
   addExpense as storeAddExpense,
@@ -42,6 +43,10 @@ import {
   addPayment as storeAddPayment,
   addTrackingUpdate as storeAddTracking,
   assignAWBAndApprove as storeAssignAWB,
+  changeAdminPassword as storeChangeAdminPassword,
+  changeAdminUsername as storeChangeAdminUsername,
+  changeFranchisePassword as storeChangeFranchisePassword,
+  changeFranchiseUsername as storeChangeFranchiseUsername,
   createBooking as storeCreateBooking,
   createFranchise as storeCreateFranchise,
   deleteCharge as storeDeleteCharge,
@@ -53,6 +58,7 @@ import {
   rejectBooking as storeRejectBooking,
   resetFranchisePassword as storeResetPassword,
   saveCharge as storeSaveCharge,
+  setTheme as storeSetTheme,
   updateBooking as storeUpdateBooking,
   updateCharge as storeUpdateCharge,
   updateFranchiseStatus as storeUpdateStatus,
@@ -513,5 +519,111 @@ export function useDeleteIncomeEntry() {
   const mutate = useCallback((id: string): void => {
     storeDeleteIncome(id);
   }, []);
+  return { mutate };
+}
+
+// ─── Theme Hook ───────────────────────────────────────────────────────────────
+
+function applyTheme(theme: "light" | "dark" | "system"): void {
+  const root = document.documentElement;
+  if (theme === "dark") {
+    root.classList.add("dark");
+  } else if (theme === "light") {
+    root.classList.remove("dark");
+  } else {
+    // system
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+    if (prefersDark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }
+}
+
+export function useTheme() {
+  const [theme, setThemeState] = useState<"light" | "dark" | "system">(() =>
+    getTheme(),
+  );
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  // Listen for system preference changes when in system mode
+  useEffect(() => {
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => applyTheme("system");
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [theme]);
+
+  const setTheme = useCallback((newTheme: "light" | "dark" | "system") => {
+    storeSetTheme(newTheme);
+    setThemeState(newTheme);
+    applyTheme(newTheme);
+  }, []);
+
+  return { theme, setTheme };
+}
+
+// ─── Credential Change Hooks ──────────────────────────────────────────────────
+
+export function useChangeAdminPassword() {
+  const mutate = useCallback(
+    (currentPassword: string, newPassword: string): boolean => {
+      return storeChangeAdminPassword(currentPassword, newPassword);
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useChangeAdminUsername() {
+  const mutate = useCallback(
+    (currentUsername: string, newUsername: string): boolean => {
+      return storeChangeAdminUsername(currentUsername, newUsername);
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useChangeFranchisePassword() {
+  const mutate = useCallback(
+    (
+      franchiseId: string,
+      currentPassword: string,
+      newPassword: string,
+    ): boolean => {
+      return storeChangeFranchisePassword(
+        franchiseId,
+        currentPassword,
+        newPassword,
+      );
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useChangeFranchiseUsername() {
+  const mutate = useCallback(
+    (
+      franchiseId: string,
+      currentUsername: string,
+      newUsername: string,
+    ): boolean => {
+      return storeChangeFranchiseUsername(
+        franchiseId,
+        currentUsername,
+        newUsername,
+      );
+    },
+    [],
+  );
   return { mutate };
 }
