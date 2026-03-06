@@ -13,7 +13,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LogOut, Package, PlusCircle } from "lucide-react";
+import { LogOut, Package, PlusCircle, Wallet } from "lucide-react";
 import { useEffect } from "react";
 import { useLocalSession } from "../hooks/useLocalStore";
 
@@ -39,6 +39,7 @@ export function FranchiseLayout() {
   const navItems = [
     { label: "New Booking", to: "/franchise/new-booking", icon: PlusCircle },
     { label: "My Bookings", to: "/franchise/bookings", icon: Package },
+    { label: "Accounts", to: "/franchise/accounts", icon: Wallet },
   ];
 
   if (!isAuthenticated || !isFranchise) return null;

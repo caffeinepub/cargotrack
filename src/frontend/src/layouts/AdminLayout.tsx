@@ -21,6 +21,7 @@ import {
   Package,
   PlusCircle,
   Users,
+  Wallet,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { BookingStatus } from "../backend.d";
@@ -62,6 +63,7 @@ export function AdminLayout() {
     { label: "New Booking", to: "/admin/new-booking", icon: PlusCircle },
     { label: "Tracking", to: "/admin/tracking", icon: Navigation },
     { label: "Franchises", to: "/admin/franchises", icon: Users },
+    { label: "Accounts", to: "/admin/accounts", icon: Wallet },
   ];
 
   if (!isAuthenticated || !isAdmin) return null;

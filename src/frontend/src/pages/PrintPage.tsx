@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import type { Booking } from "../backend.d";
 import { getAllBookings, storedToBooking } from "../lib/store";
 import { AWBDocument } from "./franchise/AWBDocument";
+import { AccountsInvoiceDocument } from "./franchise/AccountsInvoiceDocument";
 import { InvoiceDocument } from "./franchise/InvoiceDocument";
 
 interface PrintPageProps {
-  docType: "invoice" | "awb";
+  docType: "invoice" | "awb" | "accounts-invoice";
 }
 
 export function PrintPage({ docType }: PrintPageProps) {
@@ -93,7 +94,12 @@ export function PrintPage({ docType }: PrintPageProps) {
         }}
       >
         <span>
-          {docType === "invoice" ? "Invoice" : "AWB"} — Booking #{bookingId}
+          {docType === "invoice"
+            ? "Invoice"
+            : docType === "accounts-invoice"
+              ? "Accounts Invoice"
+              : "AWB"}{" "}
+          — Booking #{bookingId}
         </span>
         <button
           type="button"
@@ -113,6 +119,8 @@ export function PrintPage({ docType }: PrintPageProps) {
       </div>
       {docType === "invoice" ? (
         <InvoiceDocument booking={booking} />
+      ) : docType === "accounts-invoice" ? (
+        <AccountsInvoiceDocument booking={booking} />
       ) : (
         <AWBDocument booking={booking} />
       )}

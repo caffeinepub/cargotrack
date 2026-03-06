@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { AdminLayout } from "./layouts/AdminLayout";
 import { FranchiseLayout } from "./layouts/FranchiseLayout";
+import { AccountsPage } from "./pages/AccountsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PrintPage } from "./pages/PrintPage";
 import { PublicTracking } from "./pages/PublicTracking";
@@ -89,6 +90,12 @@ const adminFranchisesRoute = createRoute({
   component: AdminFranchises,
 });
 
+const adminAccountsRoute = createRoute({
+  getParentRoute: () => adminLayoutRoute,
+  path: "/accounts",
+  component: AccountsPage,
+});
+
 // Franchise layout route
 const franchiseLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -114,6 +121,12 @@ const franchiseBookingsRoute = createRoute({
   component: FranchiseBookings,
 });
 
+const franchiseAccountsRoute = createRoute({
+  getParentRoute: () => franchiseLayoutRoute,
+  path: "/accounts",
+  component: AccountsPage,
+});
+
 // Print routes (no layout, standalone pages)
 const printInvoiceRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -127,11 +140,18 @@ const printAWBRoute = createRoute({
   component: () => <PrintPage docType="awb" />,
 });
 
+const printAccountsInvoiceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/print/accounts-invoice/$bookingId",
+  component: () => <PrintPage docType="accounts-invoice" />,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   printInvoiceRoute,
   printAWBRoute,
+  printAccountsInvoiceRoute,
   adminLayoutRoute.addChildren([
     adminIndexRoute,
     adminDashboardRoute,
@@ -139,11 +159,13 @@ const routeTree = rootRoute.addChildren([
     adminNewBookingRoute,
     adminTrackingRoute,
     adminFranchisesRoute,
+    adminAccountsRoute,
   ]),
   franchiseLayoutRoute.addChildren([
     franchiseDashboardRoute,
     franchiseNewBookingRoute,
     franchiseBookingsRoute,
+    franchiseAccountsRoute,
   ]),
 ]);
 

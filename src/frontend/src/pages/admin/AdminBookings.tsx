@@ -24,7 +24,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Eye, FileText, Loader2, Search } from "lucide-react";
+import {
+  Download,
+  Eye,
+  FileText,
+  Loader2,
+  Printer,
+  Search,
+} from "lucide-react";
 
 import { motion } from "motion/react";
 import { useState } from "react";
@@ -58,6 +65,13 @@ function BookingDetailModal({
 
   const handlePrintAWB = () => {
     window.open(`/print/awb/${booking.bookingId.toString()}`, "_blank");
+  };
+
+  const handlePrintAccountsInvoice = () => {
+    window.open(
+      `/print/accounts-invoice/${booking.bookingId.toString()}`,
+      "_blank",
+    );
   };
 
   return (
@@ -282,6 +296,14 @@ function BookingDetailModal({
                 data-ocid="booking_detail.secondary_button"
               >
                 Download Invoice
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handlePrintAccountsInvoice}
+                data-ocid="booking_detail.accounts_invoice_button"
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Accounts Invoice
               </Button>
             </>
           )}

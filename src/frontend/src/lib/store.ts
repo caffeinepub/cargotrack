@@ -28,6 +28,7 @@ export const STORAGE_KEYS = {
   TRACKING: "cargotrack_tracking",
   SESSION: "cargotrack_session",
   BOOKING_COUNTER: "cargotrack_booking_counter",
+  CHARGES: "cargotrack_charges",
 } as const;
 
 // ─── Session ─────────────────────────────────────────────────────────────────
@@ -516,4 +517,65 @@ export function resetFranchisePassword(
 export function deleteFranchise(franchiseId: string): void {
   const all = readFranchises().filter((f) => f.franchiseId !== franchiseId);
   writeFranchises(all);
+}
+
+// ─── Charges Storage ──────────────────────────────────────────────────────────
+
+export interface StoredCharge {
+  id: string;
+  bookingId: string; // matches StoredBooking.bookingId
+  label: string; // e.g. "Customs Duty", "Packaging Charges", custom text
+  amount: number;
+  currency: string; // inherited from booking invoice currency
+  createdAt: string; // ms timestamp as string
+}
+
+function readCharges(): StoredCharge[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CHARGES);
+    if (!raw) return [];
+    return JSON.parse(raw) as StoredCharge[];
+  } catch {
+    return [];
+  }
+}
+
+function writeCharges(charges: StoredCharge[]): void {
+  localStorage.setItem(STORAGE_KEYS.CHARGES, JSON.stringify(charges));
+  window.dispatchEvent(new Event("cargotrack:charges"));
+}
+
+export function getChargesByBooking(bookingId: string): StoredCharge[] {
+  return readCharges().filter((c) => c.bookingId === bookingId);
+}
+
+export function saveCharge(
+  charge: Omit<StoredCharge, "id" | "createdAt">,
+): StoredCharge {
+  const newCharge: StoredCharge = {
+    ...charge,
+    id: `CHG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: String(Date.now()),
+  };
+  const all = readCharges();
+  all.push(newCharge);
+  writeCharges(all);
+  return newCharge;
+}
+
+export function updateCharge(
+  id: string,
+  updates: Partial<Pick<StoredCharge, "label" | "amount">>,
+): StoredCharge | null {
+  const all = readCharges();
+  const idx = all.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  all[idx] = { ...all[idx], ...updates };
+  writeCharges(all);
+  return all[idx];
+}
+
+export function deleteCharge(id: string): void {
+  const all = readCharges().filter((c) => c.id !== id);
+  writeCharges(all);
 }

@@ -17,6 +17,7 @@ import type { Booking, Franchise, TrackingUpdate } from "../backend.d";
 import {
   type Session,
   type StoredBooking,
+  type StoredCharge,
   type StoredFranchise,
   type StoredTracking,
   authenticate,
@@ -25,6 +26,7 @@ import {
   getAllFranchises,
   getBookingByAWB,
   getBookingsByFranchise,
+  getChargesByBooking,
   getSession,
   getTrackingByAWB,
   setSession,
@@ -32,10 +34,13 @@ import {
   assignAWBAndApprove as storeAssignAWB,
   createBooking as storeCreateBooking,
   createFranchise as storeCreateFranchise,
+  deleteCharge as storeDeleteCharge,
   deleteFranchise as storeDeleteFranchise,
   deleteTrackingUpdate as storeDeleteTracking,
   rejectBooking as storeRejectBooking,
   resetFranchisePassword as storeResetPassword,
+  saveCharge as storeSaveCharge,
+  updateCharge as storeUpdateCharge,
   updateFranchiseStatus as storeUpdateStatus,
   storedToBooking,
   storedToFranchise,
@@ -320,6 +325,52 @@ export function useResetFranchisePassword() {
 export function useDeleteFranchise() {
   const mutate = useCallback((franchiseId: string): void => {
     storeDeleteFranchise(franchiseId);
+  }, []);
+  return { mutate };
+}
+
+// ─── Charges Hooks ────────────────────────────────────────────────────────────
+
+export function useChargesByBooking(bookingId: string) {
+  const [charges, setCharges] = useState<StoredCharge[]>(() =>
+    getChargesByBooking(bookingId),
+  );
+
+  const refresh = useCallback(() => {
+    setCharges(getChargesByBooking(bookingId));
+  }, [bookingId]);
+
+  useStorageEvent("cargotrack:charges", refresh);
+
+  return { charges, refresh };
+}
+
+export function useSaveCharge() {
+  const mutate = useCallback(
+    (charge: Omit<StoredCharge, "id" | "createdAt">): StoredCharge => {
+      return storeSaveCharge(charge);
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useUpdateCharge() {
+  const mutate = useCallback(
+    (
+      id: string,
+      updates: Partial<Pick<StoredCharge, "label" | "amount">>,
+    ): StoredCharge | null => {
+      return storeUpdateCharge(id, updates);
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useDeleteCharge() {
+  const mutate = useCallback((id: string): void => {
+    storeDeleteCharge(id);
   }, []);
   return { mutate };
 }
