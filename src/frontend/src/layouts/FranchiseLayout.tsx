@@ -13,7 +13,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LogOut, Package, Package2, PlusCircle } from "lucide-react";
+import { LogOut, Package, PlusCircle } from "lucide-react";
 import { useEffect } from "react";
 import { useLocalSession } from "../hooks/useLocalStore";
 
@@ -48,20 +48,17 @@ export function FranchiseLayout() {
       <div className="flex min-h-screen w-full">
         <Sidebar>
           <SidebarHeader className="px-4 py-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-                <Package2 className="h-4 w-4 text-sidebar-primary-foreground" />
-              </div>
-              <div>
-                <p className="font-display font-bold text-sidebar-foreground text-sm">
-                  CargoTrack
-                </p>
-                <p className="text-sidebar-foreground/50 text-xs truncate max-w-[120px]">
-                  {session?.franchiseName ??
-                    session?.username ??
-                    "Franchise Portal"}
-                </p>
-              </div>
+            <div className="flex flex-col items-center gap-1">
+              <img
+                src="/assets/uploads/20260305_152357_0000-1.png"
+                alt="Worldyfly Logistics"
+                className="h-12 w-auto object-contain"
+              />
+              <p className="text-sidebar-foreground/50 text-xs truncate max-w-[140px]">
+                {session?.franchiseName ??
+                  session?.username ??
+                  "Franchise Portal"}
+              </p>
             </div>
           </SidebarHeader>
 

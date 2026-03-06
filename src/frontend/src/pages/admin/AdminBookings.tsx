@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, FileText, Loader2, Search } from "lucide-react";
+
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -33,8 +34,6 @@ import {
 } from "../../hooks/useLocalStore";
 import { formatDate, formatTimestamp } from "../../lib/helpers";
 import { KYC_LABEL } from "../../lib/kycLabels";
-import { AWBPrintView } from "../franchise/AWBPrintView";
-import { InvoicePrintView } from "../franchise/InvoicePrintView";
 
 function BookingDetailModal({
   booking,
@@ -44,22 +43,12 @@ function BookingDetailModal({
   onClose: () => void;
 }) {
   const { updates: tracking } = useTrackingByAWB(booking.awbNumber ?? null);
-  const [showPrint, setShowPrint] = useState<"invoice" | "awb" | null>(null);
-
   const handlePrintInvoice = () => {
-    setShowPrint("invoice");
-    setTimeout(() => {
-      window.print();
-      setShowPrint(null);
-    }, 300);
+    window.open(`/print/invoice/${booking.bookingId.toString()}`, "_blank");
   };
 
   const handlePrintAWB = () => {
-    setShowPrint("awb");
-    setTimeout(() => {
-      window.print();
-      setShowPrint(null);
-    }, 300);
+    window.open(`/print/awb/${booking.bookingId.toString()}`, "_blank");
   };
 
   return (
@@ -296,8 +285,6 @@ function BookingDetailModal({
           </Button>
         </DialogFooter>
       </DialogContent>
-      {showPrint === "invoice" && <InvoicePrintView booking={booking} />}
-      {showPrint === "awb" && <AWBPrintView booking={booking} />}
     </>
   );
 }

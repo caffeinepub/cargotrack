@@ -10,6 +10,7 @@ import {
 import { AdminLayout } from "./layouts/AdminLayout";
 import { FranchiseLayout } from "./layouts/FranchiseLayout";
 import { LoginPage } from "./pages/LoginPage";
+import { PrintPage } from "./pages/PrintPage";
 import { PublicTracking } from "./pages/PublicTracking";
 import { AdminBookings } from "./pages/admin/AdminBookings";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
@@ -113,9 +114,24 @@ const franchiseBookingsRoute = createRoute({
   component: FranchiseBookings,
 });
 
+// Print routes (no layout, standalone pages)
+const printInvoiceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/print/invoice/$bookingId",
+  component: () => <PrintPage docType="invoice" />,
+});
+
+const printAWBRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/print/awb/$bookingId",
+  component: () => <PrintPage docType="awb" />,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
+  printInvoiceRoute,
+  printAWBRoute,
   adminLayoutRoute.addChildren([
     adminIndexRoute,
     adminDashboardRoute,

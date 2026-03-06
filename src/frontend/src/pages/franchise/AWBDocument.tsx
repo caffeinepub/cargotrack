@@ -156,9 +156,9 @@ function AWBCopy({
               }}
             >
               <img
-                src="/assets/generated/worldyfly-logo-transparent.dim_300x100.png"
+                src="/assets/uploads/20260305_152357_0000-1.png"
                 alt="Worldyfly"
-                style={{ height: "36px", objectFit: "contain" }}
+                style={{ height: "50px", objectFit: "contain" }}
               />
             </td>
             <td

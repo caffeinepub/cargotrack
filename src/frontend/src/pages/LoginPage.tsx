@@ -9,7 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Loader2, Lock, Package2, User } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, User } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useLocalSession } from "../hooks/useLocalStore";
@@ -81,12 +81,11 @@ export function LoginPage() {
       >
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center mb-3 shadow-lg">
-            <Package2 className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <h1 className="font-display text-2xl font-bold text-sidebar-foreground">
-            CargoTrack
-          </h1>
+          <img
+            src="/assets/uploads/20260305_152357_0000-1.png"
+            alt="Worldyfly Logistics"
+            className="h-20 w-auto object-contain mb-2 drop-shadow-lg"
+          />
           <p className="text-sidebar-foreground/60 text-sm mt-1">
             Cargo &amp; Courier Management
           </p>
