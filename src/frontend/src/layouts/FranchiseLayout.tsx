@@ -51,9 +51,10 @@ export function FranchiseLayout() {
           <SidebarHeader className="px-4 py-4">
             <div className="flex flex-col items-center gap-1">
               <img
-                src="/assets/uploads/20260305_152357_0000-1.png"
+                src="/assets/20260305_152357_0000.png"
                 alt="Worldyfly Logistics"
                 className="h-12 w-auto object-contain"
+                style={{ mixBlendMode: "screen" }}
               />
               <p className="text-sidebar-foreground/50 text-xs truncate max-w-[140px]">
                 {session?.franchiseName ??

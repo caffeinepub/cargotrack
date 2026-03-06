@@ -74,7 +74,8 @@ function SectionHeader({
   title,
   subtitle,
 }: {
-  icon: React.ElementType;
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic icon component
+  icon: React.ComponentType<any>;
   title: string;
   subtitle?: string;
 }) {

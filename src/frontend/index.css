@@ -202,4 +202,21 @@
       oklch(0.88 0.012 220 / 0.3)
     );
   }
+
+  /* Public tracking footer link styles */
+  .footer-contact-link {
+    color: rgba(255, 255, 255, 0.4);
+  }
+  .footer-contact-link:hover,
+  .footer-contact-link:focus {
+    color: #2ad4c0;
+  }
+
+  .footer-caffeine-link {
+    color: rgba(255, 255, 255, 0.25);
+  }
+  .footer-caffeine-link:hover,
+  .footer-caffeine-link:focus {
+    color: #2ad4c0;
+  }
 }

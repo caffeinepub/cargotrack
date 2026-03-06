@@ -1,22 +1,21 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { OrbitControls, Stars } from "@react-three/drei";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Link } from "@tanstack/react-router";
 import {
   Anchor,
-  ArrowRight,
   Globe,
   Loader2,
-  Mail,
   MapPin,
   Package,
-  Phone,
   Plane,
   Search,
   User,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
 import { StatusBadge } from "../components/StatusBadge";
 import { TrackingTimeline } from "../components/TrackingTimeline";
 import {
@@ -25,81 +24,512 @@ import {
 } from "../hooks/useLocalStore";
 import { formatDate } from "../lib/helpers";
 
-// Decorative background SVG elements
-function DecorativePlane({ className }: { className?: string }) {
+// ─── 3D Scene Components ────────────────────────────────────────────────────
+
+function Globe3D() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const wireRef = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += delta * 0.12;
+      meshRef.current.rotation.x = Math.sin(Date.now() * 0.0003) * 0.08;
+    }
+    if (wireRef.current) {
+      wireRef.current.rotation.y += delta * 0.12;
+      wireRef.current.rotation.x = Math.sin(Date.now() * 0.0003) * 0.08;
+    }
+  });
+
   return (
-    <svg
-      viewBox="0 0 120 120"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M10 60 L70 10 L80 30 L50 50 L110 40 L100 60 L50 70 L60 110 L40 100 L30 70 Z"
-        fill="currentColor"
-        opacity="0.4"
-      />
-    </svg>
+    <group>
+      {/* Solid inner globe */}
+      <mesh ref={meshRef}>
+        <sphereGeometry args={[1.8, 32, 32]} />
+        <meshPhongMaterial
+          color="#1a3a6e"
+          emissive="#0d2555"
+          emissiveIntensity={0.4}
+          transparent
+          opacity={0.9}
+          shininess={60}
+        />
+      </mesh>
+      {/* Wireframe overlay */}
+      <mesh ref={wireRef}>
+        <sphereGeometry args={[1.82, 20, 20]} />
+        <meshBasicMaterial
+          color="#4a90d9"
+          wireframe
+          transparent
+          opacity={0.22}
+        />
+      </mesh>
+      {/* Outer glow ring */}
+      <mesh>
+        <sphereGeometry args={[1.95, 32, 32]} />
+        <meshBasicMaterial
+          color="#2060c0"
+          transparent
+          opacity={0.06}
+          side={THREE.BackSide}
+        />
+      </mesh>
+    </group>
   );
 }
 
-function DecorativeGlobe({ className }: { className?: string }) {
+// City dots on the globe surface
+function CityDot({
+  lat,
+  lon,
+  radius = 1.83,
+}: {
+  lat: number;
+  lon: number;
+  radius?: number;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  const position = useMemo<[number, number, number]>(() => {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lon + 180) * (Math.PI / 180);
+    return [
+      -radius * Math.sin(phi) * Math.cos(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.sin(theta),
+    ];
+  }, [lat, lon, radius]);
+
+  useFrame(() => {
+    if (meshRef.current) {
+      const scale = 1 + Math.sin(Date.now() * 0.002 + lat) * 0.3;
+      meshRef.current.scale.setScalar(scale);
+    }
+  });
+
   return (
-    <svg
-      viewBox="0 0 200 200"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle
-        cx="100"
-        cy="100"
-        r="90"
-        stroke="currentColor"
-        strokeWidth="2"
-        opacity="0.3"
-      />
-      <ellipse
-        cx="100"
-        cy="100"
-        rx="50"
-        ry="90"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.2"
-      />
-      <ellipse
-        cx="100"
-        cy="100"
-        rx="90"
-        ry="35"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        opacity="0.2"
-      />
-      <line
-        x1="10"
-        y1="100"
-        x2="190"
-        y2="100"
-        stroke="currentColor"
-        strokeWidth="1"
-        opacity="0.15"
-      />
-      <line
-        x1="100"
-        y1="10"
-        x2="100"
-        y2="190"
-        stroke="currentColor"
-        strokeWidth="1"
-        opacity="0.15"
-      />
-    </svg>
+    <mesh ref={meshRef} position={position}>
+      <sphereGeometry args={[0.028, 8, 8]} />
+      <meshBasicMaterial color="#ffd166" transparent opacity={0.9} />
+    </mesh>
   );
 }
+
+// Cargo plane orbiting the globe
+function CargoPlaneMesh() {
+  const groupRef = useRef<THREE.Group>(null);
+  const angleRef = useRef(0);
+
+  useFrame((_, delta) => {
+    angleRef.current += delta * 0.4;
+    const angle = angleRef.current;
+    const orbitRadius = 2.6;
+    const tiltAngle = Math.PI / 6;
+
+    if (groupRef.current) {
+      const x = orbitRadius * Math.cos(angle);
+      const y = orbitRadius * Math.sin(tiltAngle) * Math.sin(angle);
+      const z = orbitRadius * Math.cos(tiltAngle) * Math.sin(angle);
+
+      groupRef.current.position.set(x, y, z);
+
+      const tangentX = -Math.sin(angle);
+      const tangentY = Math.sin(tiltAngle) * Math.cos(angle);
+      const tangentZ = Math.cos(tiltAngle) * Math.cos(angle);
+
+      const lookTarget = new THREE.Vector3(
+        x + tangentX * 0.1,
+        y + tangentY * 0.1,
+        z + tangentZ * 0.1,
+      );
+      groupRef.current.lookAt(lookTarget);
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Fuselage */}
+      <mesh>
+        <cylinderGeometry args={[0.03, 0.04, 0.25, 8]} />
+        <meshPhongMaterial
+          color="#e8f0ff"
+          emissive="#4a90d9"
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+      {/* Left wing */}
+      <mesh position={[0.12, 0, -0.02]} rotation={[0, 0, -0.1]}>
+        <boxGeometry args={[0.22, 0.015, 0.06]} />
+        <meshPhongMaterial
+          color="#c8d8f0"
+          emissive="#3a7abf"
+          emissiveIntensity={0.4}
+        />
+      </mesh>
+      {/* Right wing */}
+      <mesh position={[-0.12, 0, -0.02]} rotation={[0, 0, 0.1]}>
+        <boxGeometry args={[0.22, 0.015, 0.06]} />
+        <meshPhongMaterial
+          color="#c8d8f0"
+          emissive="#3a7abf"
+          emissiveIntensity={0.4}
+        />
+      </mesh>
+      {/* Tail fin */}
+      <mesh position={[0, 0.045, -0.11]}>
+        <boxGeometry args={[0.015, 0.07, 0.06]} />
+        <meshPhongMaterial
+          color="#ffd166"
+          emissive="#e5a820"
+          emissiveIntensity={0.6}
+        />
+      </mesh>
+      {/* Engine glow */}
+      <mesh position={[0.09, -0.015, 0.01]}>
+        <sphereGeometry args={[0.018, 6, 6]} />
+        <meshBasicMaterial color="#ffd166" transparent opacity={0.85} />
+      </mesh>
+      <mesh position={[-0.09, -0.015, 0.01]}>
+        <sphereGeometry args={[0.018, 6, 6]} />
+        <meshBasicMaterial color="#ffd166" transparent opacity={0.85} />
+      </mesh>
+    </group>
+  );
+}
+
+// Cargo ship orbiting in a different plane
+function CargoShipMesh() {
+  const groupRef = useRef<THREE.Group>(null);
+  const angleRef = useRef(Math.PI); // start opposite side from plane
+
+  useFrame((_, delta) => {
+    angleRef.current += delta * 0.18; // slower than plane
+    const angle = angleRef.current;
+    const orbitRadius = 3.2;
+    const tiltAngle = -Math.PI / 8; // nearly equatorial
+
+    if (groupRef.current) {
+      const x = orbitRadius * Math.cos(angle);
+      const y = orbitRadius * Math.sin(tiltAngle) * Math.sin(angle);
+      const z = orbitRadius * Math.cos(tiltAngle) * Math.sin(angle);
+      groupRef.current.position.set(x, y, z);
+
+      const tangentX = -Math.sin(angle);
+      const tangentY = Math.sin(tiltAngle) * Math.cos(angle);
+      const tangentZ = Math.cos(tiltAngle) * Math.cos(angle);
+      const lookTarget = new THREE.Vector3(
+        x + tangentX * 0.1,
+        y + tangentY * 0.1,
+        z + tangentZ * 0.1,
+      );
+      groupRef.current.lookAt(lookTarget);
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Hull — flat wide box */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[0.38, 0.06, 0.14]} />
+        <meshPhongMaterial
+          color="#2a5298"
+          emissive="#1a3a78"
+          emissiveIntensity={0.4}
+        />
+      </mesh>
+      {/* Superstructure (bridge) */}
+      <mesh position={[0.08, 0.065, 0]}>
+        <boxGeometry args={[0.09, 0.07, 0.1]} />
+        <meshPhongMaterial
+          color="#3a6ac0"
+          emissive="#2050a0"
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+      {/* Cargo containers stack 1 */}
+      <mesh position={[-0.06, 0.06, 0]}>
+        <boxGeometry args={[0.1, 0.05, 0.1]} />
+        <meshPhongMaterial
+          color="#e05a20"
+          emissive="#b03010"
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+      {/* Cargo containers stack 2 */}
+      <mesh position={[-0.06, 0.11, 0]}>
+        <boxGeometry args={[0.1, 0.05, 0.1]} />
+        <meshPhongMaterial
+          color="#ffd166"
+          emissive="#c09030"
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+      {/* Bow point */}
+      <mesh position={[-0.22, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <coneGeometry args={[0.04, 0.08, 6]} />
+        <meshPhongMaterial
+          color="#1a3a78"
+          emissive="#0d2555"
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+      {/* Wake glow */}
+      <mesh position={[0.22, -0.02, 0]}>
+        <sphereGeometry args={[0.025, 6, 6]} />
+        <meshBasicMaterial color="#7ab0e8" transparent opacity={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+// Floating cargo box orbiting slowly
+function CargoBoxMesh() {
+  const groupRef = useRef<THREE.Group>(null);
+  const angleRef = useRef(Math.PI / 2);
+
+  useFrame((_, delta) => {
+    angleRef.current += delta * 0.25;
+    const angle = angleRef.current;
+    const orbitRadius = 2.9;
+    const tiltAngle = Math.PI / 2.5;
+
+    if (groupRef.current) {
+      const x = orbitRadius * Math.cos(angle);
+      const y = orbitRadius * Math.sin(tiltAngle) * Math.sin(angle);
+      const z = orbitRadius * Math.cos(tiltAngle) * Math.sin(angle);
+      groupRef.current.position.set(x, y, z);
+      // Gentle tumble
+      groupRef.current.rotation.x += delta * 0.3;
+      groupRef.current.rotation.y += delta * 0.2;
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Main crate */}
+      <mesh>
+        <boxGeometry args={[0.14, 0.12, 0.12]} />
+        <meshPhongMaterial
+          color="#c07830"
+          emissive="#804820"
+          emissiveIntensity={0.3}
+        />
+      </mesh>
+      {/* Strapping bands H */}
+      <mesh position={[0, 0, 0.062]}>
+        <boxGeometry args={[0.145, 0.015, 0.005]} />
+        <meshPhongMaterial
+          color="#ffd166"
+          emissive="#c09030"
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+      {/* Strapping bands V */}
+      <mesh position={[0, 0, 0.062]}>
+        <boxGeometry args={[0.015, 0.125, 0.005]} />
+        <meshPhongMaterial
+          color="#ffd166"
+          emissive="#c09030"
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+      {/* Glow dot */}
+      <mesh position={[0.08, 0.07, 0]}>
+        <sphereGeometry args={[0.012, 6, 6]} />
+        <meshBasicMaterial color="#4a90d9" transparent opacity={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+// Floating particles around the globe
+function FloatingParticles() {
+  const pointsRef = useRef<THREE.Points>(null);
+
+  const [positions, sizes] = useMemo(() => {
+    const count = 120;
+    const pos = new Float32Array(count * 3);
+    const sz = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      const r = 2.2 + Math.random() * 1.8;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi);
+      sz[i] = Math.random() * 0.03 + 0.01;
+    }
+    return [pos, sz];
+  }, []);
+
+  useFrame(() => {
+    if (pointsRef.current) {
+      pointsRef.current.rotation.y += 0.0005;
+      pointsRef.current.rotation.x += 0.0002;
+    }
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-size" args={[sizes, 1]} />
+      </bufferGeometry>
+      <pointsMaterial
+        color="#7ab0e8"
+        size={0.04}
+        transparent
+        opacity={0.6}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
+// Arc route line between two globe points
+function RouteArc({
+  startLat,
+  startLon,
+  endLat,
+  endLon,
+  globeRadius = 1.85,
+}: {
+  startLat: number;
+  startLon: number;
+  endLat: number;
+  endLon: number;
+  globeRadius?: number;
+}) {
+  const points = useMemo(() => {
+    const latLonToVec = (lat: number, lon: number, r: number) => {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 180) * (Math.PI / 180);
+      return new THREE.Vector3(
+        -r * Math.sin(phi) * Math.cos(theta),
+        r * Math.cos(phi),
+        r * Math.sin(phi) * Math.sin(theta),
+      );
+    };
+
+    const start = latLonToVec(startLat, startLon, globeRadius);
+    const end = latLonToVec(endLat, endLon, globeRadius);
+    const mid = start
+      .clone()
+      .add(end)
+      .multiplyScalar(0.5)
+      .normalize()
+      .multiplyScalar(globeRadius * 1.5);
+
+    const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+    return curve.getPoints(40);
+  }, [startLat, startLon, endLat, endLon, globeRadius]);
+
+  const lineObject = useMemo(() => {
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({
+      color: "#4a90d9",
+      transparent: true,
+      opacity: 0.45,
+    });
+    return new THREE.Line(geo, mat);
+  }, [points]);
+
+  useFrame(() => {
+    if (lineObject) {
+      (lineObject.material as THREE.LineBasicMaterial).opacity =
+        0.3 + Math.sin(Date.now() * 0.001) * 0.25;
+    }
+  });
+
+  return <primitive object={lineObject} />;
+}
+
+// Orbital ring around globe equator
+function OrbitalRing() {
+  const ringRef = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (ringRef.current) {
+      ringRef.current.rotation.z += delta * 0.05;
+      ringRef.current.rotation.x = Math.PI / 3;
+    }
+  });
+
+  return (
+    <mesh ref={ringRef} rotation={[Math.PI / 3, 0, 0]}>
+      <ringGeometry args={[2.4, 2.44, 64]} />
+      <meshBasicMaterial
+        color="#4a90d9"
+        transparent
+        opacity={0.15}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+// Main 3D scene inside Canvas
+function Scene3D() {
+  return (
+    <>
+      {/* Lighting */}
+      <ambientLight intensity={0.6} color="#3a6ec0" />
+      <pointLight position={[5, 5, 5]} intensity={2.5} color="#6aaef0" />
+      <pointLight position={[-5, -3, -5]} intensity={1.2} color="#ffd166" />
+      <directionalLight position={[3, 4, 2]} intensity={1.4} color="#ffffff" />
+      {/* Background stars */}
+      <Stars
+        radius={80}
+        depth={50}
+        count={3000}
+        factor={3}
+        saturation={0}
+        fade
+        speed={0.3}
+      />
+      {/* Globe */}
+      <Globe3D />
+      {/* City dots — major cargo hubs */}
+      <CityDot lat={28.6} lon={77.2} /> {/* Delhi */}
+      <CityDot lat={19.1} lon={72.9} /> {/* Mumbai */}
+      <CityDot lat={10.2} lon={76.4} /> {/* Kochi */}
+      <CityDot lat={51.5} lon={-0.1} /> {/* London */}
+      <CityDot lat={40.7} lon={-74.0} /> {/* New York */}
+      <CityDot lat={1.3} lon={103.8} /> {/* Singapore */}
+      <CityDot lat={25.2} lon={55.3} /> {/* Dubai */}
+      <CityDot lat={35.7} lon={139.7} /> {/* Tokyo */}
+      <CityDot lat={-33.9} lon={151.2} /> {/* Sydney */}
+      <CityDot lat={48.8} lon={2.3} /> {/* Paris */}
+      {/* Shipping routes */}
+      <RouteArc startLat={10.2} startLon={76.4} endLat={25.2} endLon={55.3} />
+      <RouteArc startLat={25.2} startLon={55.3} endLat={51.5} endLon={-0.1} />
+      <RouteArc startLat={19.1} startLon={72.9} endLat={1.3} endLon={103.8} />
+      <RouteArc startLat={28.6} startLon={77.2} endLat={40.7} endLon={-74.0} />
+      <RouteArc startLat={1.3} startLon={103.8} endLat={35.7} endLon={139.7} />
+      {/* Cargo plane — orbits fast at tilt */}
+      <CargoPlaneMesh />
+      {/* Cargo ship — orbits slow near equator */}
+      <CargoShipMesh />
+      {/* Floating cargo box — tumbles slowly in polar orbit */}
+      <CargoBoxMesh />
+      {/* Floating particles */}
+      <FloatingParticles />
+      {/* Orbital ring */}
+      <OrbitalRing />
+      {/* Camera controls — auto rotate only */}
+      <OrbitControls
+        autoRotate
+        autoRotateSpeed={0.4}
+        enableZoom={false}
+        enablePan={false}
+        enableRotate={false}
+      />
+    </>
+  );
+}
+
+// ─── Public Tracking Page ────────────────────────────────────────────────────
 
 export function PublicTracking() {
   const [inputValue, setInputValue] = useState("");
@@ -115,14 +545,17 @@ export function PublicTracking() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-body">
-      {/* Sticky top login bar */}
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: "#12204a" }}
+    >
+      {/* Staff Login — top right */}
       <div className="fixed top-0 right-0 z-50 p-4">
         <Link to="/login">
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/70 hover:text-white hover:bg-white/10 border border-white/15 hover:border-white/30 backdrop-blur-sm transition-all"
+            className="text-white/60 hover:text-white hover:bg-white/8 border border-white/12 hover:border-white/25 backdrop-blur-md transition-all"
             data-ocid="nav.link"
           >
             Staff Login
@@ -130,145 +563,205 @@ export function PublicTracking() {
         </Link>
       </div>
 
-      {/* ─── HERO ─────────────────────────────────────────────────────────── */}
+      {/* ─── HERO WITH 3D CANVAS ──────────────────────────────────────────── */}
       <main className="flex-1">
-        <section className="relative tracking-hero-bg min-h-[520px] flex flex-col items-center justify-center px-4 py-24 overflow-hidden">
-          {/* Grid overlay */}
-          <div className="absolute inset-0 tracking-hero-grid pointer-events-none" />
-          {/* Radial glow */}
-          <div className="absolute inset-0 tracking-hero-radial pointer-events-none" />
-
-          {/* Decorative plane — top right */}
-          <DecorativePlane className="absolute top-8 right-[5%] w-28 h-28 text-primary opacity-[0.06] rotate-12 pointer-events-none" />
-          {/* Decorative globe — bottom left */}
-          <DecorativeGlobe className="absolute -bottom-10 -left-8 w-56 h-56 text-primary opacity-[0.07] pointer-events-none" />
-          {/* Secondary globe — top left */}
-          <DecorativeGlobe className="absolute -top-16 right-[15%] w-72 h-72 text-white opacity-[0.04] pointer-events-none" />
-
-          {/* Content */}
-          <div className="relative z-10 w-full max-w-2xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
+        <section
+          className="relative flex flex-col items-center justify-center overflow-hidden"
+          style={{ minHeight: "100vh" }}
+        >
+          {/* 3D Canvas background */}
+          <div className="absolute inset-0 z-0">
+            <Canvas
+              camera={{ position: [0, 0, 5], fov: 55 }}
+              gl={{ alpha: true, antialias: true }}
+              style={{ background: "transparent" }}
             >
-              {/* Logo */}
-              <div className="flex justify-center mb-8">
-                <img
-                  src="/assets/uploads/20260305_152357_0000-1.png"
-                  alt="Worldyfly Logistics"
-                  className="h-16 w-auto object-contain drop-shadow-2xl"
-                />
-              </div>
+              <Suspense fallback={null}>
+                <Scene3D />
+              </Suspense>
+            </Canvas>
+          </div>
 
-              {/* Badge pill */}
-              <motion.span
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.15, duration: 0.4 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary uppercase tracking-widest mb-6 backdrop-blur-sm"
-              >
-                <Globe className="h-3 w-3" />
-                International Cargo &amp; Courier Tracking
-              </motion.span>
+          {/* Dark gradient overlay to frame content */}
+          <div
+            className="absolute inset-0 z-[1] pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 60% at 50% 50%, transparent 20%, rgba(18,32,74,0.5) 70%, rgba(18,32,74,0.92) 100%)",
+            }}
+          />
 
-              {/* Headline */}
-              <motion.h1
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-[1.1] tracking-tight"
-              >
-                Track Your Shipment{" "}
-                <span className="relative inline-block">
-                  <span className="text-primary">Worldwide</span>
-                  <span
-                    className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-gradient-to-r from-primary via-primary/80 to-transparent"
-                    aria-hidden="true"
-                  />
-                </span>
-              </motion.h1>
+          {/* Bottom fade */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-40 z-[1] pointer-events-none"
+            style={{
+              background: "linear-gradient(to bottom, transparent, #12204a)",
+            }}
+          />
 
-              {/* Sub-headline */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.35, duration: 0.5 }}
-                className="text-white/60 mb-10 text-base sm:text-lg leading-relaxed"
-              >
-                Enter your AWB number below for real-time updates on your cargo.
-              </motion.p>
-
-              {/* Search card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{
-                  delay: 0.45,
-                  duration: 0.55,
-                  ease: [0.25, 0.46, 0.45, 0.94],
+          {/* Hero Content */}
+          <div className="relative z-10 w-full max-w-2xl mx-auto text-center px-4 py-24">
+            {/* Logo — original black logo shown with a subtle glow backdrop */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="flex justify-center mb-8"
+            >
+              <img
+                src="/assets/20260305_152357_0000.png"
+                alt="Worldyfly Logistics"
+                className="h-16 w-auto object-contain"
+                style={{
+                  mixBlendMode: "screen",
+                  filter:
+                    "drop-shadow(0 0 16px rgba(100,160,255,0.5)) brightness(1.15) contrast(1.05)",
                 }}
-                className="bg-white rounded-2xl p-2 search-card-shadow"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                    <Input
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      placeholder="Enter AWB number (e.g. WF-2026-00123)..."
-                      className="h-14 pl-12 text-foreground text-base border-0 bg-transparent shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
-                      data-ocid="tracking.search_input"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSearch}
-                    disabled={isLoading || !inputValue.trim()}
-                    className="h-12 px-6 rounded-xl font-semibold text-base bg-primary hover:bg-primary/90 text-primary-foreground shadow-none transition-all hover:scale-[1.02] active:scale-[0.98] flex-shrink-0"
-                    data-ocid="tracking.primary_button"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <>
-                        <Search className="h-4 w-4 mr-2" />
-                        <span>Track</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
+              />
+            </motion.div>
 
-              {/* Trust indicators */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.65, duration: 0.5 }}
-                className="flex items-center justify-center gap-6 mt-8 flex-wrap"
+            {/* Badge pill */}
+            <motion.span
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.45 }}
+              className="inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-widest mb-6 backdrop-blur-sm"
+              style={{
+                borderColor: "rgba(74,144,217,0.4)",
+                background: "rgba(74,144,217,0.12)",
+                color: "#7ab0e8",
+              }}
+            >
+              <Globe className="h-3 w-3" />
+              International Cargo &amp; Courier Tracking
+            </motion.span>
+
+            {/* Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.65 }}
+              className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-[1.1] tracking-tight"
+            >
+              Track Your Shipment{" "}
+              <span
+                className="relative inline-block"
+                style={{ color: "#7ab0e8" }}
               >
-                {[
-                  { icon: Globe, label: "200+ Countries" },
-                  { icon: Plane, label: "Air Freight" },
-                  { icon: Anchor, label: "Sea Cargo" },
-                ].map(({ icon: Icon, label }) => (
-                  <div
-                    key={label}
-                    className="flex items-center gap-1.5 text-white/40 text-xs"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </motion.div>
+                Worldwide
+                <span
+                  className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(to right, #4a90d9, rgba(74,144,217,0.5), transparent)",
+                  }}
+                  aria-hidden="true"
+                />
+              </span>
+            </motion.h1>
+
+            {/* Sub-headline */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.45, duration: 0.5 }}
+              className="text-white/55 mb-10 text-base sm:text-lg leading-relaxed"
+            >
+              Enter your AWB number below for real-time updates on your cargo.
+            </motion.p>
+
+            {/* Search card — glassmorphism */}
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{
+                delay: 0.55,
+                duration: 0.6,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
+              className="rounded-2xl p-2"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                boxShadow:
+                  "0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(74,144,217,0.1), inset 0 1px 0 rgba(255,255,255,0.08)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search
+                    className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none"
+                    style={{ color: "rgba(74,144,217,0.7)" }}
+                  />
+                  <Input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    placeholder="Enter AWB number (e.g. WF-2026-00123)..."
+                    className="h-14 pl-12 text-base border-0 bg-transparent shadow-none focus-visible:ring-0 placeholder:text-white/30"
+                    style={{ color: "rgba(255,255,255,0.9)" }}
+                    data-ocid="tracking.search_input"
+                  />
+                </div>
+                <Button
+                  onClick={handleSearch}
+                  disabled={isLoading || !inputValue.trim()}
+                  className="h-12 px-7 rounded-xl font-semibold text-base flex-shrink-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  style={{
+                    background: "linear-gradient(135deg, #1a4fa0, #4a90d9)",
+                    color: "#ffffff",
+                    boxShadow: "0 4px 16px rgba(74,144,217,0.4)",
+                    border: "none",
+                  }}
+                  data-ocid="tracking.primary_button"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-2" />
+                      <span>Track</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+
+            {/* Trust indicators */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.75, duration: 0.5 }}
+              className="flex items-center justify-center gap-6 mt-8 flex-wrap"
+            >
+              {[
+                { icon: Globe, label: "200+ Countries" },
+                { icon: Plane, label: "Air Freight" },
+                { icon: Anchor, label: "Sea Cargo" },
+              ].map(({ icon: Icon, label }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-1.5 text-xs"
+                  style={{ color: "rgba(255,255,255,0.35)" }}
+                >
+                  <Icon
+                    className="h-3.5 w-3.5"
+                    style={{ color: "rgba(74,144,217,0.7)" }}
+                  />
+                  <span>{label}</span>
+                </div>
+              ))}
             </motion.div>
           </div>
         </section>
 
-        {/* ─── RESULTS ─────────────────────────────────────────────────────── */}
-        <section className="max-w-3xl mx-auto px-4 py-14 relative">
-          {/* Subtle top fade from hero */}
-          <div className="pointer-events-none absolute -top-8 left-0 right-0 h-16 bg-gradient-to-b from-sidebar/5 to-transparent" />
+        {/* ─── RESULTS ──────────────────────────────────────────────────────── */}
+        <section
+          className="max-w-3xl mx-auto px-4 py-14 relative"
+          style={{ background: "#12204a" }}
+        >
           <AnimatePresence mode="wait">
             {isLoading && (
               <motion.div
@@ -280,12 +773,24 @@ export function PublicTracking() {
                 data-ocid="tracking.loading_state"
               >
                 <div className="relative">
-                  <div className="h-16 w-16 rounded-full border-2 border-primary/20 flex items-center justify-center">
-                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                  <div
+                    className="h-16 w-16 rounded-full border-2 flex items-center justify-center"
+                    style={{ borderColor: "rgba(74,144,217,0.2)" }}
+                  >
+                    <Loader2
+                      className="h-7 w-7 animate-spin"
+                      style={{ color: "#4a90d9" }}
+                    />
                   </div>
-                  <div className="absolute inset-0 rounded-full border-2 border-primary/10 animate-ping" />
+                  <div
+                    className="absolute inset-0 rounded-full border-2 animate-ping"
+                    style={{ borderColor: "rgba(74,144,217,0.1)" }}
+                  />
                 </div>
-                <p className="text-muted-foreground text-sm font-medium">
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
                   Looking up your shipment…
                 </p>
               </motion.div>
@@ -299,174 +804,336 @@ export function PublicTracking() {
                 exit={{ opacity: 0 }}
                 data-ocid="tracking.error_state"
               >
-                <Card className="border-border/60 premium-card-shadow overflow-hidden">
-                  <CardContent className="py-16 flex flex-col items-center text-center gap-5">
-                    <div className="relative">
-                      <div className="h-24 w-24 rounded-full bg-muted/60 flex items-center justify-center">
-                        <Package
-                          className="h-12 w-12 text-muted-foreground/50"
-                          strokeWidth={1.5}
-                        />
-                      </div>
-                      <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-destructive/15 border border-destructive/25 flex items-center justify-center">
-                        <span className="text-destructive text-xs font-bold">
-                          ?
-                        </span>
-                      </div>
+                <div
+                  className="rounded-2xl border py-16 flex flex-col items-center text-center gap-5"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    borderColor: "rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  <div className="relative">
+                    <div
+                      className="h-24 w-24 rounded-full flex items-center justify-center"
+                      style={{ background: "rgba(255,255,255,0.05)" }}
+                    >
+                      <Package
+                        className="h-12 w-12"
+                        style={{ color: "rgba(255,255,255,0.2)" }}
+                        strokeWidth={1.5}
+                      />
                     </div>
-                    <div>
-                      <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                        We couldn't find that shipment
-                      </h3>
-                      <p className="text-muted-foreground text-sm leading-relaxed max-w-xs mx-auto">
-                        No shipment found for AWB{" "}
-                        <strong className="font-mono text-foreground/80 bg-muted/60 px-1.5 py-0.5 rounded text-xs">
-                          {searchAWB}
-                        </strong>
-                        . Please double-check the number and try again.
-                      </p>
+                    <div
+                      className="absolute -top-1 -right-1 h-7 w-7 rounded-full border flex items-center justify-center"
+                      style={{
+                        background: "rgba(239,68,68,0.15)",
+                        borderColor: "rgba(239,68,68,0.25)",
+                      }}
+                    >
+                      <span className="text-red-400 text-xs font-bold">?</span>
                     </div>
-                    <p className="text-xs text-muted-foreground/60 max-w-xs">
-                      Tip: AWB numbers are case-sensitive. If you're still
-                      having trouble, contact{" "}
-                      <a
-                        href="tel:+919526369141"
-                        className="text-primary hover:underline"
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-white mb-2">
+                      We couldn&apos;t find that shipment
+                    </h3>
+                    <p
+                      className="text-sm leading-relaxed max-w-xs mx-auto"
+                      style={{ color: "rgba(255,255,255,0.45)" }}
+                    >
+                      No shipment found for AWB{" "}
+                      <strong
+                        className="font-mono px-1.5 py-0.5 rounded text-xs"
+                        style={{
+                          color: "rgba(255,255,255,0.8)",
+                          background: "rgba(255,255,255,0.08)",
+                        }}
                       >
-                        +91 95263 69141
-                      </a>
+                        {searchAWB}
+                      </strong>
+                      . Please double-check the number and try again.
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <p
+                    className="text-xs max-w-xs"
+                    style={{ color: "rgba(255,255,255,0.3)" }}
+                  >
+                    Tip: AWB numbers are case-sensitive. If you&apos;re still
+                    having trouble, contact{" "}
+                    <a
+                      href="tel:+919526369141"
+                      className="hover:underline"
+                      style={{ color: "#4a90d9" }}
+                    >
+                      +91 95263 69141
+                    </a>
+                  </p>
+                </div>
               </motion.div>
             )}
 
             {booking && !isLoading && (
               <motion.div
                 key="results"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="space-y-6"
                 data-ocid="tracking.success_state"
               >
-                {/* ── Shipment Summary Card ────────────────────────────────── */}
-                <Card className="border-l-4 border-l-primary border-border/60 premium-card-shadow overflow-hidden">
-                  <CardHeader className="pb-4 pt-6 px-6">
+                {/* ── Shipment Summary Card ──────────────────────────────── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05, duration: 0.5 }}
+                  className="rounded-2xl overflow-hidden"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(74,144,217,0.25)",
+                    borderLeft: "4px solid #4a90d9",
+                    backdropFilter: "blur(10px)",
+                    boxShadow: "0 0 30px rgba(74,144,217,0.08)",
+                  }}
+                >
+                  <div className="p-6">
                     <div className="flex items-start justify-between flex-wrap gap-4">
                       {/* AWB + Route */}
                       <div className="space-y-3">
                         <div>
-                          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mb-1.5">
+                          <p
+                            className="text-[10px] font-semibold uppercase tracking-widest mb-2"
+                            style={{ color: "rgba(122,176,232,0.85)" }}
+                          >
                             AWB Number
                           </p>
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono text-2xl font-bold text-foreground tracking-wide">
+                          {/* Shimmer AWB badge */}
+                          <div
+                            className="inline-block rounded-lg px-4 py-2 overflow-hidden relative"
+                            style={{
+                              background: "rgba(74,144,217,0.1)",
+                              border: "1px solid rgba(74,144,217,0.25)",
+                            }}
+                          >
+                            <span
+                              className="font-mono text-2xl font-bold tracking-wide"
+                              style={{ color: "#7ab0e8" }}
+                            >
                               {booking.awbNumber}
                             </span>
+                            {/* Shimmer effect */}
+                            <motion.span
+                              className="absolute inset-0 pointer-events-none"
+                              style={{
+                                background:
+                                  "linear-gradient(105deg, transparent 40%, rgba(74,144,217,0.18) 50%, transparent 60%)",
+                              }}
+                              animate={{ x: ["-100%", "100%"] }}
+                              transition={{
+                                repeat: Number.POSITIVE_INFINITY,
+                                repeatDelay: 2,
+                                duration: 1.2,
+                                ease: "easeInOut",
+                              }}
+                            />
                           </div>
                         </div>
 
-                        {/* Route: Origin → Destination */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1.5 rounded-lg bg-muted/60 px-3 py-1.5 border border-border/60">
-                            <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                            <span className="text-sm font-semibold text-foreground">
+                        {/* Route: Origin → Destination with animated dash */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <div
+                            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5"
+                            style={{
+                              background: "rgba(255,255,255,0.06)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                            }}
+                          >
+                            <MapPin
+                              className="h-3.5 w-3.5 flex-shrink-0"
+                              style={{ color: "#4a90d9" }}
+                            />
+                            <span className="text-sm font-semibold text-white">
                               {booking.originCountry}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1 text-muted-foreground/40">
-                            <div className="h-px w-4 bg-current" />
-                            <ArrowRight className="h-3.5 w-3.5" />
-                            <div className="h-px w-4 bg-current" />
+
+                          {/* Animated dashed line */}
+                          <div
+                            className="flex items-center gap-1"
+                            style={{ color: "rgba(74,144,217,0.5)" }}
+                          >
+                            <motion.div
+                              className="flex items-center gap-0.5"
+                              animate={{ opacity: [0.4, 1, 0.4] }}
+                              transition={{
+                                repeat: Number.POSITIVE_INFINITY,
+                                duration: 2,
+                                ease: "easeInOut",
+                              }}
+                            >
+                              <div
+                                className="h-px w-3"
+                                style={{ background: "rgba(74,144,217,0.5)" }}
+                              />
+                              <span className="text-sm">✈️</span>
+                              <div
+                                className="h-px w-3"
+                                style={{ background: "rgba(74,144,217,0.5)" }}
+                              />
+                            </motion.div>
                           </div>
-                          <div className="flex items-center gap-1.5 rounded-lg bg-primary/5 px-3 py-1.5 border border-primary/20">
-                            <Globe className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                            <span className="text-sm font-semibold text-foreground">
+
+                          <div
+                            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5"
+                            style={{
+                              background: "rgba(74,144,217,0.08)",
+                              border: "1px solid rgba(74,144,217,0.25)",
+                            }}
+                          >
+                            <Globe
+                              className="h-3.5 w-3.5 flex-shrink-0"
+                              style={{ color: "#4a90d9" }}
+                            />
+                            <span className="text-sm font-semibold text-white">
                               {booking.destinationCountry}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Status badge */}
-                      <StatusBadge
-                        status={booking.status}
-                        className="text-sm px-4 py-2 font-semibold"
-                      />
+                      {/* Status badge with glow */}
+                      <div
+                        className="rounded-xl"
+                        style={{
+                          filter: "drop-shadow(0 0 8px rgba(74,144,217,0.3))",
+                        }}
+                      >
+                        <StatusBadge
+                          status={booking.status}
+                          className="text-sm px-4 py-2 font-semibold"
+                        />
+                      </div>
                     </div>
-                  </CardHeader>
 
-                  <CardContent className="px-6 pb-6">
                     {/* Info chips */}
-                    <div className="grid grid-cols-2 gap-3 mb-5">
-                      <div className="rounded-xl border border-border/60 bg-muted/30 p-3.5">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <User className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest">
-                            Shipper
+                    <div className="grid grid-cols-2 gap-3 mt-5 mb-5">
+                      {[
+                        { label: "Shipper", value: booking.shipper.name },
+                        { label: "Consignee", value: booking.consignee.name },
+                      ].map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="rounded-xl p-3.5"
+                          style={{
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.07)",
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <User
+                              className="h-3.5 w-3.5 flex-shrink-0"
+                              style={{ color: "#4a90d9" }}
+                            />
+                            <p
+                              className="text-[10px] font-semibold uppercase tracking-widest"
+                              style={{ color: "rgba(255,255,255,0.4)" }}
+                            >
+                              {label}
+                            </p>
+                          </div>
+                          <p className="font-semibold text-sm text-white truncate">
+                            {value}
                           </p>
                         </div>
-                        <p className="font-semibold text-sm text-foreground truncate">
-                          {booking.shipper.name}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-muted/30 p-3.5">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <User className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest">
-                            Consignee
-                          </p>
-                        </div>
-                        <p className="font-semibold text-sm text-foreground truncate">
-                          {booking.consignee.name}
-                        </p>
-                      </div>
+                      ))}
                     </div>
 
                     {booking.awbAssignedDate && (
-                      <div className="flex items-center gap-2 pt-4 border-t border-border/50">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary/60 flex-shrink-0" />
-                        <p className="text-xs text-muted-foreground">
+                      <div
+                        className="flex items-center gap-2 pt-4"
+                        style={{
+                          borderTop: "1px solid rgba(255,255,255,0.07)",
+                        }}
+                      >
+                        <div
+                          className="h-1.5 w-1.5 rounded-full flex-shrink-0"
+                          style={{ background: "rgba(74,144,217,0.7)" }}
+                        />
+                        <p
+                          className="text-xs"
+                          style={{ color: "rgba(255,255,255,0.4)" }}
+                        >
                           AWB Assigned:{" "}
-                          <span className="font-semibold text-foreground/80">
+                          <span
+                            className="font-semibold"
+                            style={{ color: "rgba(255,255,255,0.7)" }}
+                          >
                             {formatDate(booking.awbAssignedDate)}
                           </span>
                         </p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </motion.div>
 
-                {/* ── Tracking Timeline Card ──────────────────────────────── */}
-                <Card className="border-border/60 premium-card-shadow overflow-hidden">
-                  <CardHeader className="pb-2 pt-6 px-6">
-                    <div className="flex items-center justify-between">
+                {/* ── Tracking Timeline Card ─────────────────────────────── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.5 }}
+                  className="rounded-2xl overflow-hidden"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
                       <div>
-                        <CardTitle className="font-display text-xl font-bold">
+                        <h2 className="font-display text-xl font-bold text-white">
                           Tracking History
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-0.5">
+                        </h2>
+                        <p
+                          className="text-sm mt-0.5"
+                          style={{ color: "rgba(255,255,255,0.4)" }}
+                        >
                           {updates.length} update
                           {updates.length !== 1 ? "s" : ""} recorded
                         </p>
                       </div>
-                      <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                        <Plane className="h-4 w-4 text-primary" />
+                      <div
+                        className="h-9 w-9 rounded-xl flex items-center justify-center"
+                        style={{
+                          background: "rgba(74,144,217,0.1)",
+                          border: "1px solid rgba(74,144,217,0.22)",
+                        }}
+                      >
+                        <Plane
+                          className="h-4 w-4"
+                          style={{ color: "#4a90d9" }}
+                        />
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="px-6 pb-6 pt-4">
+
                     {updates.length === 0 ? (
                       <div
                         className="py-10 text-center space-y-3"
                         data-ocid="tracking.empty_state"
                       >
-                        <div className="h-12 w-12 rounded-full bg-muted/60 mx-auto flex items-center justify-center">
-                          <Package className="h-6 w-6 text-muted-foreground/50" />
+                        <div
+                          className="h-12 w-12 rounded-full mx-auto flex items-center justify-center"
+                          style={{ background: "rgba(255,255,255,0.05)" }}
+                        >
+                          <Package
+                            className="h-6 w-6"
+                            style={{ color: "rgba(255,255,255,0.2)" }}
+                          />
                         </div>
-                        <p className="text-muted-foreground text-sm">
+                        <p
+                          className="text-sm"
+                          style={{ color: "rgba(255,255,255,0.35)" }}
+                        >
                           Tracking updates will appear here once your shipment
                           is processed.
                         </p>
@@ -474,49 +1141,46 @@ export function PublicTracking() {
                     ) : (
                       <TrackingTimeline updates={updates} />
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
         </section>
       </main>
 
-      {/* ─── FOOTER ──────────────────────────────────────────────────────── */}
-      <footer className="border-t border-border bg-card/60 backdrop-blur-sm">
-        {/* Company info strip */}
+      {/* ─── FOOTER ─────────────────────────────────────────────────────── */}
+      <footer
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+        }}
+      >
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            {/* Logo + name */}
             <div className="flex items-center gap-3">
               <img
-                src="/assets/uploads/20260305_152357_0000-1.png"
+                src="/assets/20260305_152357_0000.png"
                 alt="Worldyfly Logistics"
-                className="h-8 w-auto object-contain opacity-80"
+                className="h-8 w-auto object-contain"
+                style={{
+                  mixBlendMode: "screen",
+                  filter:
+                    "drop-shadow(0 0 8px rgba(255,255,255,0.5)) brightness(1.05)",
+                  opacity: 0.9,
+                }}
               />
             </div>
 
-            {/* Contact details */}
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-              <a
-                href="tel:+919526369141"
-                className="flex items-center gap-1.5 hover:text-primary transition-colors"
-              >
-                <Phone className="h-3 w-3" />
-                +91 95263 69141
-              </a>
-              <a
-                href="mailto:info@worldyfly.com"
-                className="flex items-center gap-1.5 hover:text-primary transition-colors"
-              >
-                <Mail className="h-3 w-3" />
-                info@worldyfly.com
-              </a>
+            <div
+              className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
               <a
                 href="https://www.worldyfly.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                className="footer-contact-link flex items-center gap-1.5 transition-colors"
               >
                 <Globe className="h-3 w-3" />
                 www.worldyfly.com
@@ -525,19 +1189,22 @@ export function PublicTracking() {
           </div>
         </div>
 
-        {/* Caffeine credit */}
-        <div className="border-t border-border/50 py-4 px-4 text-center">
-          <p className="text-xs text-muted-foreground/60">
-            © {new Date().getFullYear()} Worldyfly Logistics. &nbsp;
-            <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-              className="hover:text-muted-foreground transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Built with ❤️ using caffeine.ai
-            </a>
-          </p>
+        <div
+          className="py-4 px-4 text-center text-xs"
+          style={{
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+            color: "rgba(255,255,255,0.25)",
+          }}
+        >
+          © {new Date().getFullYear()} Worldyfly Logistics. &nbsp;
+          <a
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+            className="footer-caffeine-link hover:underline transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Built with ❤️ using caffeine.ai
+          </a>
         </div>
       </footer>
     </div>

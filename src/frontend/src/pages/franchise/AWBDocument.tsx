@@ -156,7 +156,7 @@ function AWBCopy({
               }}
             >
               <img
-                src="/assets/uploads/20260305_152357_0000-1.png"
+                src="/assets/20260305_152357_0000.png"
                 alt="Worldyfly"
                 style={{ height: "50px", objectFit: "contain" }}
               />
