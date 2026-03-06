@@ -5,9 +5,10 @@ import { getAllBookings, storedToBooking } from "../lib/store";
 import { AWBDocument } from "./franchise/AWBDocument";
 import { AccountsInvoiceDocument } from "./franchise/AccountsInvoiceDocument";
 import { InvoiceDocument } from "./franchise/InvoiceDocument";
+import { LabelDocument } from "./franchise/LabelDocument";
 
 interface PrintPageProps {
-  docType: "invoice" | "awb" | "accounts-invoice";
+  docType: "invoice" | "awb" | "accounts-invoice" | "label";
 }
 
 export function PrintPage({ docType }: PrintPageProps) {
@@ -98,7 +99,9 @@ export function PrintPage({ docType }: PrintPageProps) {
             ? "Invoice"
             : docType === "accounts-invoice"
               ? "Accounts Invoice"
-              : "AWB"}{" "}
+              : docType === "label"
+                ? "Shipping Label"
+                : "AWB"}{" "}
           — Booking #{bookingId}
         </span>
         <button
@@ -121,6 +124,18 @@ export function PrintPage({ docType }: PrintPageProps) {
         <InvoiceDocument booking={booking} />
       ) : docType === "accounts-invoice" ? (
         <AccountsInvoiceDocument booking={booking} />
+      ) : docType === "label" ? (
+        <div
+          style={{
+            padding: "20px",
+            background: "#f5f5f5",
+            minHeight: "100vh",
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <LabelDocument booking={booking} />
+        </div>
       ) : (
         <AWBDocument booking={booking} />
       )}

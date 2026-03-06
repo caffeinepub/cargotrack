@@ -53,6 +53,7 @@ import {
   rejectBooking as storeRejectBooking,
   resetFranchisePassword as storeResetPassword,
   saveCharge as storeSaveCharge,
+  updateBooking as storeUpdateBooking,
   updateCharge as storeUpdateCharge,
   updateFranchiseStatus as storeUpdateStatus,
   storedToBooking,
@@ -201,6 +202,20 @@ export function useRejectBooking() {
     const result = storeRejectBooking(bookingId);
     return !!result;
   }, []);
+  return { mutate };
+}
+
+export function useUpdateBooking() {
+  const mutate = useCallback(
+    (
+      bookingId: BookingId,
+      updates: Parameters<typeof storeUpdateBooking>[1],
+    ): boolean => {
+      const result = storeUpdateBooking(bookingId, updates);
+      return !!result;
+    },
+    [],
+  );
   return { mutate };
 }
 

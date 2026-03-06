@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download, Eye, FileText } from "lucide-react";
+import { Download, Eye, FileText, Tag } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 
@@ -48,6 +48,10 @@ function BookingDetail({
     window.open(`/print/awb/${booking.bookingId.toString()}`, "_blank");
   };
 
+  const handlePrintLabel = () => {
+    window.open(`/print/label/${booking.bookingId.toString()}`, "_blank");
+  };
+
   return (
     <>
       <DialogContent
@@ -59,6 +63,39 @@ function BookingDetail({
             Booking #{booking.bookingId.toString()}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Print buttons at the TOP */}
+        {booking.status === BookingStatus.approved && (
+          <div className="flex flex-wrap gap-2 pb-2 border-b border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrintAWB}
+              data-ocid="franchise_booking_detail.print_awb_button"
+            >
+              <FileText className="mr-1.5 h-3.5 w-3.5" />
+              Print AWB
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrintInvoice}
+              data-ocid="franchise_booking_detail.secondary_button"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Download Invoice
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrintLabel}
+              data-ocid="franchise_booking_detail.print_label_button"
+            >
+              <Tag className="mr-1.5 h-3.5 w-3.5" />
+              Print Label
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* AWB + Status */}
@@ -241,26 +278,6 @@ function BookingDetail({
         </div>
 
         <DialogFooter>
-          {booking.status === BookingStatus.approved && (
-            <>
-              <Button
-                variant="outline"
-                onClick={handlePrintAWB}
-                data-ocid="franchise_booking_detail.print_awb_button"
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Print AWB
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handlePrintInvoice}
-                data-ocid="franchise_booking_detail.secondary_button"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download Invoice
-              </Button>
-            </>
-          )}
           <Button
             onClick={onClose}
             data-ocid="franchise_booking_detail.close_button"

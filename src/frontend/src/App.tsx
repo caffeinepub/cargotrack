@@ -146,12 +146,19 @@ const printAccountsInvoiceRoute = createRoute({
   component: () => <PrintPage docType="accounts-invoice" />,
 });
 
+const printLabelRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/print/label/$bookingId",
+  component: () => <PrintPage docType="label" />,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   printInvoiceRoute,
   printAWBRoute,
   printAccountsInvoiceRoute,
+  printLabelRoute,
   adminLayoutRoute.addChildren([
     adminIndexRoute,
     adminDashboardRoute,

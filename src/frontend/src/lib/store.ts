@@ -409,6 +409,29 @@ export function assignAWBAndApprove(
   return bookings[idx];
 }
 
+export function updateBooking(
+  bookingId: BookingId,
+  updates: {
+    shipper?: StoredBooking["shipper"];
+    consignee?: StoredBooking["consignee"];
+    destinationCountry?: string;
+    invoice?: StoredBooking["invoice"];
+    boxes?: StoredBooking["boxes"];
+    boxItems?: StoredBooking["boxItems"];
+  },
+): StoredBooking | null {
+  const bookings = readBookings();
+  const idx = bookings.findIndex((b) => b.bookingId === bookingId.toString());
+  if (idx === -1) return null;
+  bookings[idx] = {
+    ...bookings[idx],
+    ...updates,
+    updatedTimestamp: String(Date.now()),
+  };
+  writeBookings(bookings);
+  return bookings[idx];
+}
+
 export function rejectBooking(bookingId: BookingId): StoredBooking | null {
   const bookings = readBookings();
   const idx = bookings.findIndex((b) => b.bookingId === bookingId.toString());
