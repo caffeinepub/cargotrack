@@ -18,24 +18,37 @@ import {
   type Session,
   type StoredBooking,
   type StoredCharge,
+  type StoredExpense,
   type StoredFranchise,
+  type StoredIncomeEntry,
+  type StoredPayment,
   type StoredTracking,
   authenticate,
   clearSession,
   getAllBookings,
+  getAllExpenses,
   getAllFranchises,
+  getAllIncomeEntries,
+  getAllPayments,
   getBookingByAWB,
   getBookingsByFranchise,
   getChargesByBooking,
+  getPaymentsByBooking,
   getSession,
   getTrackingByAWB,
   setSession,
+  addExpense as storeAddExpense,
+  addIncomeEntry as storeAddIncome,
+  addPayment as storeAddPayment,
   addTrackingUpdate as storeAddTracking,
   assignAWBAndApprove as storeAssignAWB,
   createBooking as storeCreateBooking,
   createFranchise as storeCreateFranchise,
   deleteCharge as storeDeleteCharge,
+  deleteExpense as storeDeleteExpense,
   deleteFranchise as storeDeleteFranchise,
+  deleteIncomeEntry as storeDeleteIncome,
+  deletePayment as storeDeletePayment,
   deleteTrackingUpdate as storeDeleteTracking,
   rejectBooking as storeRejectBooking,
   resetFranchisePassword as storeResetPassword,
@@ -371,6 +384,119 @@ export function useUpdateCharge() {
 export function useDeleteCharge() {
   const mutate = useCallback((id: string): void => {
     storeDeleteCharge(id);
+  }, []);
+  return { mutate };
+}
+
+// ─── Payment Hooks ────────────────────────────────────────────────────────────
+
+export function usePaymentsByBooking(bookingId: string) {
+  const [payments, setPayments] = useState<StoredPayment[]>(() =>
+    getPaymentsByBooking(bookingId),
+  );
+
+  const refresh = useCallback(() => {
+    setPayments(getPaymentsByBooking(bookingId));
+  }, [bookingId]);
+
+  useStorageEvent("cargotrack:payments", refresh);
+
+  return { payments, refresh };
+}
+
+export function useAllPayments() {
+  const [payments, setPayments] = useState<StoredPayment[]>(() =>
+    getAllPayments(),
+  );
+
+  const refresh = useCallback(() => {
+    setPayments(getAllPayments());
+  }, []);
+
+  useStorageEvent("cargotrack:payments", refresh);
+
+  return { payments, refresh };
+}
+
+export function useAddPayment() {
+  const mutate = useCallback(
+    (payment: Omit<StoredPayment, "id" | "createdAt">): StoredPayment => {
+      return storeAddPayment(payment);
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useDeletePayment() {
+  const mutate = useCallback((id: string): void => {
+    storeDeletePayment(id);
+  }, []);
+  return { mutate };
+}
+
+// ─── Expense Hooks ────────────────────────────────────────────────────────────
+
+export function useAllExpenses() {
+  const [expenses, setExpenses] = useState<StoredExpense[]>(() =>
+    getAllExpenses(),
+  );
+
+  const refresh = useCallback(() => {
+    setExpenses(getAllExpenses());
+  }, []);
+
+  useStorageEvent("cargotrack:expenses", refresh);
+
+  return { expenses, refresh };
+}
+
+export function useAddExpense() {
+  const mutate = useCallback(
+    (expense: Omit<StoredExpense, "id" | "createdAt">): StoredExpense => {
+      return storeAddExpense(expense);
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useDeleteExpense() {
+  const mutate = useCallback((id: string): void => {
+    storeDeleteExpense(id);
+  }, []);
+  return { mutate };
+}
+
+// ─── Income Entry Hooks ───────────────────────────────────────────────────────
+
+export function useAllIncomeEntries() {
+  const [entries, setEntries] = useState<StoredIncomeEntry[]>(() =>
+    getAllIncomeEntries(),
+  );
+
+  const refresh = useCallback(() => {
+    setEntries(getAllIncomeEntries());
+  }, []);
+
+  useStorageEvent("cargotrack:income", refresh);
+
+  return { entries, refresh };
+}
+
+export function useAddIncomeEntry() {
+  const mutate = useCallback(
+    (entry: Omit<StoredIncomeEntry, "id" | "createdAt">): StoredIncomeEntry => {
+      return storeAddIncome(entry);
+    },
+    [],
+  );
+  return { mutate };
+}
+
+export function useDeleteIncomeEntry() {
+  const mutate = useCallback((id: string): void => {
+    storeDeleteIncome(id);
   }, []);
   return { mutate };
 }

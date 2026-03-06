@@ -29,6 +29,9 @@ export const STORAGE_KEYS = {
   SESSION: "cargotrack_session",
   BOOKING_COUNTER: "cargotrack_booking_counter",
   CHARGES: "cargotrack_charges",
+  PAYMENTS: "cargotrack_payments",
+  EXPENSES: "cargotrack_expenses",
+  INCOME: "cargotrack_income",
 } as const;
 
 // ─── Session ─────────────────────────────────────────────────────────────────
@@ -578,4 +581,169 @@ export function updateCharge(
 export function deleteCharge(id: string): void {
   const all = readCharges().filter((c) => c.id !== id);
   writeCharges(all);
+}
+
+// ─── Payment Storage ──────────────────────────────────────────────────────────
+
+export interface StoredPayment {
+  id: string;
+  bookingId: string; // matches StoredBooking.bookingId
+  franchiseId: string | null; // who the payment is from
+  amount: number; // INR
+  paymentDate: string; // YYYY-MM-DD
+  paymentMethod: "cash" | "bank_transfer" | "cheque" | "other";
+  reference: string; // cheque no / transaction ID etc.
+  notes: string;
+  createdAt: string; // ms timestamp
+}
+
+function readPayments(): StoredPayment[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
+    if (!raw) return [];
+    return JSON.parse(raw) as StoredPayment[];
+  } catch {
+    return [];
+  }
+}
+
+function writePayments(payments: StoredPayment[]): void {
+  localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(payments));
+  window.dispatchEvent(new Event("cargotrack:payments"));
+}
+
+export function getPaymentsByBooking(bookingId: string): StoredPayment[] {
+  return readPayments().filter((p) => p.bookingId === bookingId);
+}
+
+export function getAllPayments(): StoredPayment[] {
+  return readPayments();
+}
+
+export function addPayment(
+  payment: Omit<StoredPayment, "id" | "createdAt">,
+): StoredPayment {
+  const newPayment: StoredPayment = {
+    ...payment,
+    id: `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: String(Date.now()),
+  };
+  const all = readPayments();
+  all.push(newPayment);
+  writePayments(all);
+  return newPayment;
+}
+
+export function deletePayment(id: string): void {
+  const all = readPayments().filter((p) => p.id !== id);
+  writePayments(all);
+}
+
+// ─── Expense Storage ──────────────────────────────────────────────────────────
+
+export type ExpenseCategory =
+  | "Rent"
+  | "Salaries"
+  | "Fuel"
+  | "Office Supplies"
+  | "Customs Duty"
+  | "Miscellaneous"
+  | string; // allows custom categories
+
+export interface StoredExpense {
+  id: string;
+  date: string; // YYYY-MM-DD
+  category: ExpenseCategory;
+  description: string;
+  amount: number; // INR
+  createdAt: string; // ms timestamp
+}
+
+function readExpenses(): StoredExpense[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.EXPENSES);
+    if (!raw) return [];
+    return JSON.parse(raw) as StoredExpense[];
+  } catch {
+    return [];
+  }
+}
+
+function writeExpenses(expenses: StoredExpense[]): void {
+  localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+  window.dispatchEvent(new Event("cargotrack:expenses"));
+}
+
+export function getAllExpenses(): StoredExpense[] {
+  return readExpenses();
+}
+
+export function addExpense(
+  expense: Omit<StoredExpense, "id" | "createdAt">,
+): StoredExpense {
+  const newExpense: StoredExpense = {
+    ...expense,
+    id: `EXP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: String(Date.now()),
+  };
+  const all = readExpenses();
+  all.unshift(newExpense);
+  writeExpenses(all);
+  return newExpense;
+}
+
+export function deleteExpense(id: string): void {
+  const all = readExpenses().filter((e) => e.id !== id);
+  writeExpenses(all);
+}
+
+// ─── Income Entry Storage ─────────────────────────────────────────────────────
+
+export type IncomeSource = "Cash" | "Bank Transfer" | "Other" | string;
+
+export interface StoredIncomeEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  source: IncomeSource;
+  description: string;
+  amount: number; // INR
+  createdAt: string; // ms timestamp
+}
+
+function readIncomeEntries(): StoredIncomeEntry[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.INCOME);
+    if (!raw) return [];
+    return JSON.parse(raw) as StoredIncomeEntry[];
+  } catch {
+    return [];
+  }
+}
+
+function writeIncomeEntries(entries: StoredIncomeEntry[]): void {
+  localStorage.setItem(STORAGE_KEYS.INCOME, JSON.stringify(entries));
+  window.dispatchEvent(new Event("cargotrack:income"));
+}
+
+export function getAllIncomeEntries(): StoredIncomeEntry[] {
+  return readIncomeEntries();
+}
+
+export function addIncomeEntry(
+  entry: Omit<StoredIncomeEntry, "id" | "createdAt">,
+): StoredIncomeEntry {
+  const newEntry: StoredIncomeEntry = {
+    ...entry,
+    id: `INC-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: String(Date.now()),
+  };
+  const all = readIncomeEntries();
+  all.unshift(newEntry);
+  writeIncomeEntries(all);
+  return newEntry;
+}
+
+export function deleteIncomeEntry(id: string): void {
+  const all = readIncomeEntries().filter((e) => e.id !== id);
+  writeIncomeEntries(all);
 }
