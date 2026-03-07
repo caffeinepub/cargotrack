@@ -479,6 +479,15 @@ export function NewBooking() {
               />
             </div>
             <div className="space-y-2">
+              <Label>PIN Code *</Label>
+              <Input
+                placeholder="e.g. 686583"
+                value={shipperZipCode}
+                onChange={(e) => setShipperZipCode(e.target.value)}
+                data-ocid="booking.shipper_zip.input"
+              />
+            </div>
+            <div className="space-y-2">
               <Label>KYC Document Type *</Label>
               <Select
                 value={shipperKycType}
@@ -504,29 +513,6 @@ export function NewBooking() {
                 value={shipperKycNumber}
                 onChange={(e) => setShipperKycNumber(e.target.value)}
                 data-ocid="booking.shipper_kyc_number.input"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Shipper PIN Code - separate box */}
-      <Card className="border-primary/30">
-        <CardContent className="pt-6">
-          <SectionHeader
-            icon={MapPin}
-            title="Shipper PIN Code"
-            subtitle="Origin postal / PIN code"
-          />
-          <div className="max-w-xs">
-            <div className="space-y-2">
-              <Label>PIN Code *</Label>
-              <Input
-                placeholder="e.g. 686583"
-                value={shipperZipCode}
-                onChange={(e) => setShipperZipCode(e.target.value)}
-                data-ocid="booking.shipper_zip.input"
-                className="text-lg font-mono tracking-widest"
               />
             </div>
           </div>
@@ -621,15 +607,6 @@ export function NewBooking() {
                 value={consigneeZipCode}
                 onChange={(e) => setConsigneeZipCode(e.target.value)}
                 data-ocid="booking.consignee_zip.input"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Country *</Label>
-              <Input
-                placeholder="Destination country"
-                value={consigneeCountry}
-                onChange={(e) => setConsigneeCountry(e.target.value)}
-                data-ocid="booking.consignee_country.input"
               />
             </div>
             <div className="space-y-2">
