@@ -104,6 +104,7 @@ export function NewBooking() {
   const [shipperName, setShipperName] = useState("");
   const [shipperPhone, setShipperPhone] = useState("");
   const [shipperAddress, setShipperAddress] = useState("");
+  const [shipperZipCode, setShipperZipCode] = useState("");
   const [shipperKycType, setShipperKycType] = useState<KycType>(
     KycType.aadhaar,
   );
@@ -113,6 +114,7 @@ export function NewBooking() {
   const [consigneeName, setConsigneeName] = useState("");
   const [consigneePhone, setConsigneePhone] = useState("");
   const [consigneeAddress, setConsigneeAddress] = useState("");
+  const [consigneeZipCode, setConsigneeZipCode] = useState("");
   const [consigneeIdType, setConsigneeIdType] = useState<KycType>(
     KycType.passport,
   );
@@ -246,17 +248,28 @@ export function NewBooking() {
   };
 
   const handleSubmit = async () => {
-    if (!shipperName || !shipperPhone || !shipperAddress || !shipperKycNumber) {
-      toast.error("Please fill in all shipper details");
+    if (
+      !shipperName ||
+      !shipperPhone ||
+      !shipperAddress ||
+      !shipperZipCode ||
+      !shipperKycNumber
+    ) {
+      toast.error(
+        "Please fill in all shipper details including phone and zip code",
+      );
       return;
     }
     if (
       !consigneeName ||
       !consigneePhone ||
       !consigneeAddress ||
+      !consigneeZipCode ||
       !consigneeIdNumber
     ) {
-      toast.error("Please fill in all consignee details");
+      toast.error(
+        "Please fill in all consignee details including phone and zip code",
+      );
       return;
     }
     if (!destinationCountry) {
@@ -267,7 +280,9 @@ export function NewBooking() {
     const shipper: Shipper = {
       name: shipperName,
       phone: shipperPhone,
-      address: shipperAddress,
+      address: shipperZipCode
+        ? `${shipperAddress}\nZip: ${shipperZipCode}`
+        : shipperAddress,
       kycType: shipperKycType,
       kycNumber: shipperKycNumber,
     };
@@ -275,7 +290,9 @@ export function NewBooking() {
     const consignee: Consignee = {
       name: consigneeName,
       phone: consigneePhone,
-      address: consigneeAddress,
+      address: consigneeZipCode
+        ? `${consigneeAddress}\nZip: ${consigneeZipCode}`
+        : consigneeAddress,
       idType: consigneeIdType,
       idNumber: consigneeIdNumber,
     };
@@ -333,10 +350,12 @@ export function NewBooking() {
     setShipperName("");
     setShipperPhone("");
     setShipperAddress("");
+    setShipperZipCode("");
     setShipperKycNumber("");
     setConsigneeName("");
     setConsigneePhone("");
     setConsigneeAddress("");
+    setConsigneeZipCode("");
     setConsigneeIdNumber("");
     setDestinationCountry("");
     setCountrySearch("");
@@ -422,11 +441,20 @@ export function NewBooking() {
             <div className="space-y-2 md:col-span-2">
               <Label>Address *</Label>
               <Textarea
-                placeholder="Full address including city, state, PIN"
+                placeholder="Full address including city, state"
                 value={shipperAddress}
                 onChange={(e) => setShipperAddress(e.target.value)}
                 rows={2}
                 data-ocid="booking.shipper_address.textarea"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Zip / PIN Code *</Label>
+              <Input
+                placeholder="e.g. 686583"
+                value={shipperZipCode}
+                onChange={(e) => setShipperZipCode(e.target.value)}
+                data-ocid="booking.shipper_zip.input"
               />
             </div>
             <div className="space-y-2">
@@ -496,6 +524,15 @@ export function NewBooking() {
                 onChange={(e) => setConsigneeAddress(e.target.value)}
                 rows={2}
                 data-ocid="booking.consignee_address.textarea"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Zip / Postal Code *</Label>
+              <Input
+                placeholder="e.g. M5J 0G1"
+                value={consigneeZipCode}
+                onChange={(e) => setConsigneeZipCode(e.target.value)}
+                data-ocid="booking.consignee_zip.input"
               />
             </div>
             <div className="space-y-2">
