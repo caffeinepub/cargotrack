@@ -114,17 +114,50 @@ function AWBCopy({
     .filter((v, i, a) => a.indexOf(v) === i)
     .join(", ");
 
-  // Parse consignee address for city/zipcode/country fields
-  const consigneeAddrParts = booking.consignee.address
-    .split(",")
-    .map((p) => p.trim());
-  const consigneeCountry = booking.destinationCountry;
-  const consigneeCity =
-    consigneeAddrParts.length > 1
-      ? consigneeAddrParts[consigneeAddrParts.length - 2]
-      : "";
-  const consigneeZip = "";
+  // Parse structured consignee address fields
+  function parseAddressField(address: string, key: string): string {
+    const regex = new RegExp(`${key}:\\s*([^,]+)`, "i");
+    const match = address.match(regex);
+    return match ? match[1].trim() : "";
+  }
 
+  const consigneeCountry = booking.destinationCountry;
+  const consigneeCity = parseAddressField(booking.consignee.address, "City");
+  const consigneeZip = parseAddressField(booking.consignee.address, "Zip");
+  const consigneeFloor = parseAddressField(booking.consignee.address, "Floor");
+  const consigneeHouseNo = parseAddressField(
+    booking.consignee.address,
+    "House No",
+  );
+  const consigneeBuildingNo = parseAddressField(
+    booking.consignee.address,
+    "Building No",
+  );
+  const consigneeStreetNo = parseAddressField(
+    booking.consignee.address,
+    "Street No",
+  );
+  const consigneeStreet = parseAddressField(
+    booking.consignee.address,
+    "Street",
+  );
+  const consigneeTown = parseAddressField(booking.consignee.address, "Town");
+  const consigneeEmail = parseAddressField(booking.consignee.address, "Email");
+
+  // Build formatted consignee address lines
+  const consigneeAddressLines = [
+    consigneeFloor ? `Floor: ${consigneeFloor}` : "",
+    consigneeHouseNo ? `House No: ${consigneeHouseNo}` : "",
+    consigneeBuildingNo ? `Building No: ${consigneeBuildingNo}` : "",
+    consigneeStreetNo ? `Street No: ${consigneeStreetNo}` : "",
+    consigneeStreet ? `Street: ${consigneeStreet}` : "",
+    consigneeTown ? `Town: ${consigneeTown}` : "",
+    consigneeCity ? consigneeCity : "",
+    consigneeZip ? `${consigneeZip}` : "",
+    consigneeCountry,
+  ].filter(Boolean);
+
+  // Shipper zip from address
   const shipperAddrParts = booking.shipper.address
     .split(",")
     .map((p) => p.trim());
@@ -132,7 +165,8 @@ function AWBCopy({
     shipperAddrParts.length > 1
       ? shipperAddrParts[shipperAddrParts.length - 2]
       : "";
-  const shipperZip = "";
+  const shipperZipMatch = booking.shipper.address.match(/Zip:\s*([^,\n]+)/i);
+  const shipperZip = shipperZipMatch ? shipperZipMatch[1].trim() : "";
 
   return (
     <div
@@ -266,14 +300,29 @@ function AWBCopy({
             <td style={{ ...cellStyle, borderRight: "1px solid #666" }}>
               <span style={labelStyle}>ADDRESS</span>
               <span style={{ ...valueStyle, fontSize: "9px" }}>
-                {booking.shipper.address}
+                {booking.shipper.address
+                  .replace(/\nZip:[^,\n]*/i, "")
+                  .replace(/,\s*Zip:[^,\n]*/i, "")}
               </span>
             </td>
             <td style={{ ...cellStyle }}>
               <span style={labelStyle}>ADDRESS</span>
               <span style={{ ...valueStyle, fontSize: "9px" }}>
-                {booking.consignee.address}
+                {consigneeAddressLines.join(", ")}
               </span>
+              {consigneeEmail && (
+                <span
+                  style={{
+                    ...valueStyle,
+                    fontSize: "8px",
+                    display: "block",
+                    color: "#555",
+                    marginTop: "2px",
+                  }}
+                >
+                  Email: {consigneeEmail}
+                </span>
+              )}
             </td>
           </tr>
         </tbody>
@@ -336,7 +385,9 @@ function AWBCopy({
               }}
             >
               <span style={labelStyle}>CITY</span>
-              <span style={valueStyle}>{consigneeCity}</span>
+              <span style={valueStyle}>
+                {consigneeCity || booking.destinationCountry}
+              </span>
             </td>
             <td
               style={{

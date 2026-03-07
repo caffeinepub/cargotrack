@@ -48,6 +48,12 @@ function BarcodeStrip({ value }: { value: string }) {
   );
 }
 
+function parseAddressField(address: string, key: string): string {
+  const regex = new RegExp(`${key}:\\s*([^,]+)`, "i");
+  const match = address.match(regex);
+  return match ? match[1].trim() : "";
+}
+
 interface Props {
   booking: Booking;
 }
@@ -235,16 +241,73 @@ export function LabelDocument({ booking }: Props) {
         <div style={{ ...val, fontSize: "13px", fontWeight: "800" }}>
           {booking.consignee.name}
         </div>
-        <div
-          style={{
-            fontSize: "10px",
-            color: "#333",
-            lineHeight: "1.4",
-            marginTop: "2px",
-          }}
-        >
-          {booking.consignee.address}
-        </div>
+        {(() => {
+          const addr = booking.consignee.address;
+          const floor = parseAddressField(addr, "Floor");
+          const houseNo = parseAddressField(addr, "House No");
+          const buildingNo = parseAddressField(addr, "Building No");
+          const streetNo = parseAddressField(addr, "Street No");
+          const street = parseAddressField(addr, "Street");
+          const town = parseAddressField(addr, "Town");
+          const city = parseAddressField(addr, "City");
+          const zip = parseAddressField(addr, "Zip");
+          const country =
+            parseAddressField(addr, "Country") || booking.destinationCountry;
+
+          const hasStructured = !!(
+            floor ||
+            houseNo ||
+            buildingNo ||
+            city ||
+            zip
+          );
+          if (!hasStructured) {
+            return (
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: "#333",
+                  lineHeight: "1.4",
+                  marginTop: "2px",
+                }}
+              >
+                {addr}
+              </div>
+            );
+          }
+          const addrLines = [
+            [
+              floor && `Floor ${floor}`,
+              houseNo && `House No. ${houseNo}`,
+              buildingNo && `Bldg No. ${buildingNo}`,
+            ]
+              .filter(Boolean)
+              .join(", "),
+            [
+              streetNo && `Street No. ${streetNo}`,
+              street && `Street: ${street}`,
+            ]
+              .filter(Boolean)
+              .join(", "),
+            [town, city].filter(Boolean).join(", "),
+            zip ? `ZIP: ${zip}` : "",
+            country.toUpperCase(),
+          ].filter(Boolean);
+          return (
+            <div
+              style={{
+                fontSize: "10px",
+                color: "#333",
+                lineHeight: "1.5",
+                marginTop: "2px",
+              }}
+            >
+              {addrLines.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>
+          );
+        })()}
         <div style={{ fontSize: "10px", color: "#333", marginTop: "2px" }}>
           Tel: {booking.consignee.phone}
         </div>

@@ -92,6 +92,52 @@ interface Props {
   booking: Booking;
 }
 
+function parseAddressField(address: string, key: string): string {
+  const regex = new RegExp(`${key}:\\s*([^,]+)`, "i");
+  const match = address.match(regex);
+  return match ? match[1].trim() : "";
+}
+
+function buildConsigneeAddressLines(
+  address: string,
+  destinationCountry: string,
+): string[] {
+  const floor = parseAddressField(address, "Floor");
+  const houseNo = parseAddressField(address, "House No");
+  const buildingNo = parseAddressField(address, "Building No");
+  const streetNo = parseAddressField(address, "Street No");
+  const street = parseAddressField(address, "Street");
+  const town = parseAddressField(address, "Town");
+  const city = parseAddressField(address, "City");
+  const zip = parseAddressField(address, "Zip");
+  const country = parseAddressField(address, "Country") || destinationCountry;
+  const email = parseAddressField(address, "Email");
+
+  // If no structured fields found, return raw address
+  if (!floor && !houseNo && !buildingNo && !city && !zip) {
+    return [address];
+  }
+
+  const lines: string[] = [];
+  const line1Parts = [
+    floor && `Floor ${floor}`,
+    houseNo && `House No. ${houseNo}`,
+    buildingNo && `Bldg No. ${buildingNo}`,
+  ].filter(Boolean);
+  if (line1Parts.length) lines.push(line1Parts.join(", "));
+  const line2Parts = [
+    streetNo && `Street No. ${streetNo}`,
+    street && `Street: ${street}`,
+  ].filter(Boolean);
+  if (line2Parts.length) lines.push(line2Parts.join(", "));
+  const line3Parts = [town, city].filter(Boolean);
+  if (line3Parts.length) lines.push(line3Parts.join(", "));
+  if (zip) lines.push(`ZIP: ${zip}`);
+  if (country) lines.push(country.toUpperCase());
+  if (email) lines.push(`Email: ${email}`);
+  return lines;
+}
+
 export function InvoiceDocument({ booking }: Props) {
   const grandTotal = booking.boxItems.reduce((s, i) => s + i.total, 0);
   const totalWeight = booking.boxes.reduce((s, b) => s + b.grossWeight, 0);
@@ -184,8 +230,15 @@ export function InvoiceDocument({ booking }: Props) {
               <div style={content}>
                 <strong>{booking.consignee.name.toUpperCase()}</strong>
                 <br />
-                {booking.consignee.address}
-                <br />
+                {buildConsigneeAddressLines(
+                  booking.consignee.address,
+                  booking.destinationCountry,
+                ).map((line) => (
+                  <span key={line}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
                 Telephone: {booking.consignee.phone}
               </div>
             </td>

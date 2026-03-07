@@ -112,9 +112,17 @@ export function NewBooking() {
 
   // Consignee
   const [consigneeName, setConsigneeName] = useState("");
-  const [consigneePhone, setConsigneePhone] = useState("");
-  const [consigneeAddress, setConsigneeAddress] = useState("");
+  const [consigneeFloor, setConsigneeFloor] = useState("");
+  const [consigneeHouseNo, setConsigneeHouseNo] = useState("");
+  const [consigneeBuildingNo, setConsigneeBuildingNo] = useState("");
+  const [consigneeStreetName, setConsigneeStreetName] = useState("");
+  const [consigneeStreetNumber, setConsigneeStreetNumber] = useState("");
+  const [consigneeTown, setConsigneeTown] = useState("");
+  const [consigneeCity, setConsigneeCity] = useState("");
   const [consigneeZipCode, setConsigneeZipCode] = useState("");
+  const [consigneeCountry, setConsigneeCountry] = useState("");
+  const [consigneePhone, setConsigneePhone] = useState("");
+  const [consigneeEmail, setConsigneeEmail] = useState("");
   const [consigneeIdType, setConsigneeIdType] = useState<KycType>(
     KycType.passport,
   );
@@ -263,12 +271,13 @@ export function NewBooking() {
     if (
       !consigneeName ||
       !consigneePhone ||
-      !consigneeAddress ||
+      !consigneeCity ||
       !consigneeZipCode ||
+      !consigneeCountry ||
       !consigneeIdNumber
     ) {
       toast.error(
-        "Please fill in all consignee details including phone and zip code",
+        "Please fill in all consignee details including city, zip code, country and phone",
       );
       return;
     }
@@ -287,12 +296,25 @@ export function NewBooking() {
       kycNumber: shipperKycNumber,
     };
 
+    const consigneeAddressParts = [
+      consigneeFloor ? `Floor: ${consigneeFloor}` : "",
+      consigneeHouseNo ? `House No: ${consigneeHouseNo}` : "",
+      consigneeBuildingNo ? `Building No: ${consigneeBuildingNo}` : "",
+      consigneeStreetNumber ? `Street No: ${consigneeStreetNumber}` : "",
+      consigneeStreetName ? `Street: ${consigneeStreetName}` : "",
+      consigneeTown ? `Town: ${consigneeTown}` : "",
+      consigneeCity ? `City: ${consigneeCity}` : "",
+      consigneeZipCode ? `Zip: ${consigneeZipCode}` : "",
+      consigneeCountry ? `Country: ${consigneeCountry}` : "",
+      consigneeEmail ? `Email: ${consigneeEmail}` : "",
+    ]
+      .filter(Boolean)
+      .join(", ");
+
     const consignee: Consignee = {
       name: consigneeName,
       phone: consigneePhone,
-      address: consigneeZipCode
-        ? `${consigneeAddress}\nZip: ${consigneeZipCode}`
-        : consigneeAddress,
+      address: consigneeAddressParts,
       idType: consigneeIdType,
       idNumber: consigneeIdNumber,
     };
@@ -353,9 +375,17 @@ export function NewBooking() {
     setShipperZipCode("");
     setShipperKycNumber("");
     setConsigneeName("");
-    setConsigneePhone("");
-    setConsigneeAddress("");
+    setConsigneeFloor("");
+    setConsigneeHouseNo("");
+    setConsigneeBuildingNo("");
+    setConsigneeStreetName("");
+    setConsigneeStreetNumber("");
+    setConsigneeTown("");
+    setConsigneeCity("");
     setConsigneeZipCode("");
+    setConsigneeCountry("");
+    setConsigneePhone("");
+    setConsigneeEmail("");
     setConsigneeIdNumber("");
     setDestinationCountry("");
     setCountrySearch("");
@@ -449,15 +479,6 @@ export function NewBooking() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Zip / PIN Code *</Label>
-              <Input
-                placeholder="e.g. 686583"
-                value={shipperZipCode}
-                onChange={(e) => setShipperZipCode(e.target.value)}
-                data-ocid="booking.shipper_zip.input"
-              />
-            </div>
-            <div className="space-y-2">
               <Label>KYC Document Type *</Label>
               <Select
                 value={shipperKycType}
@@ -489,6 +510,29 @@ export function NewBooking() {
         </CardContent>
       </Card>
 
+      {/* Shipper PIN Code - separate box */}
+      <Card className="border-primary/30">
+        <CardContent className="pt-6">
+          <SectionHeader
+            icon={MapPin}
+            title="Shipper PIN Code"
+            subtitle="Origin postal / PIN code"
+          />
+          <div className="max-w-xs">
+            <div className="space-y-2">
+              <Label>PIN Code *</Label>
+              <Input
+                placeholder="e.g. 686583"
+                value={shipperZipCode}
+                onChange={(e) => setShipperZipCode(e.target.value)}
+                data-ocid="booking.shipper_zip.input"
+                className="text-lg font-mono tracking-widest"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Section 2: Consignee */}
       <Card>
         <CardContent className="pt-6">
@@ -498,41 +542,113 @@ export function NewBooking() {
             subtitle="Destination recipient information"
           />
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Full Name *</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Receiver Name *</Label>
               <Input
-                placeholder="Recipient name"
+                placeholder="Full name of recipient"
                 value={consigneeName}
                 onChange={(e) => setConsigneeName(e.target.value)}
                 data-ocid="booking.consignee_name.input"
               />
             </div>
             <div className="space-y-2">
-              <Label>Phone Number *</Label>
+              <Label>Floor</Label>
               <Input
-                placeholder="International phone"
-                value={consigneePhone}
-                onChange={(e) => setConsigneePhone(e.target.value)}
-                data-ocid="booking.consignee_phone.input"
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Address *</Label>
-              <Textarea
-                placeholder="Full destination address"
-                value={consigneeAddress}
-                onChange={(e) => setConsigneeAddress(e.target.value)}
-                rows={2}
-                data-ocid="booking.consignee_address.textarea"
+                placeholder="Floor number"
+                value={consigneeFloor}
+                onChange={(e) => setConsigneeFloor(e.target.value)}
+                data-ocid="booking.consignee_floor.input"
               />
             </div>
             <div className="space-y-2">
-              <Label>Zip / Postal Code *</Label>
+              <Label>House No.</Label>
+              <Input
+                placeholder="House number"
+                value={consigneeHouseNo}
+                onChange={(e) => setConsigneeHouseNo(e.target.value)}
+                data-ocid="booking.consignee_house_no.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Building No.</Label>
+              <Input
+                placeholder="Building number"
+                value={consigneeBuildingNo}
+                onChange={(e) => setConsigneeBuildingNo(e.target.value)}
+                data-ocid="booking.consignee_building_no.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Street Name</Label>
+              <Input
+                placeholder="Street name"
+                value={consigneeStreetName}
+                onChange={(e) => setConsigneeStreetName(e.target.value)}
+                data-ocid="booking.consignee_street_name.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Street Number</Label>
+              <Input
+                placeholder="Street number"
+                value={consigneeStreetNumber}
+                onChange={(e) => setConsigneeStreetNumber(e.target.value)}
+                data-ocid="booking.consignee_street_number.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Town</Label>
+              <Input
+                placeholder="Town"
+                value={consigneeTown}
+                onChange={(e) => setConsigneeTown(e.target.value)}
+                data-ocid="booking.consignee_town.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>City *</Label>
+              <Input
+                placeholder="City"
+                value={consigneeCity}
+                onChange={(e) => setConsigneeCity(e.target.value)}
+                data-ocid="booking.consignee_city.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Zip Code *</Label>
               <Input
                 placeholder="e.g. M5J 0G1"
                 value={consigneeZipCode}
                 onChange={(e) => setConsigneeZipCode(e.target.value)}
                 data-ocid="booking.consignee_zip.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Country *</Label>
+              <Input
+                placeholder="Destination country"
+                value={consigneeCountry}
+                onChange={(e) => setConsigneeCountry(e.target.value)}
+                data-ocid="booking.consignee_country.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mobile *</Label>
+              <Input
+                placeholder="International mobile number"
+                value={consigneePhone}
+                onChange={(e) => setConsigneePhone(e.target.value)}
+                data-ocid="booking.consignee_phone.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                placeholder="recipient@email.com"
+                value={consigneeEmail}
+                onChange={(e) => setConsigneeEmail(e.target.value)}
+                data-ocid="booking.consignee_email.input"
               />
             </div>
             <div className="space-y-2">
