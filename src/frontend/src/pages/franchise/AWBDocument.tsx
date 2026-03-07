@@ -24,6 +24,7 @@ function BarcodeStrip({ value }: { value: string }) {
       style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
     >
       <div
+        className="barcode-bar"
         style={{
           display: "flex",
           height: "45px",
@@ -37,6 +38,7 @@ function BarcodeStrip({ value }: { value: string }) {
         {bars.map((w, i) => (
           <div
             key={`bar-${i}-${w}`}
+            className="barcode-bar"
             style={{
               width: `${w}px`,
               background: i % 2 === 0 ? "#000" : "#fff",
@@ -680,18 +682,29 @@ function AWBCopy({
 
 export function AWBDocument({ booking }: Props) {
   return (
-    <div
-      style={{
-        fontFamily: "Arial, Helvetica, sans-serif",
-        color: "#111",
-        background: "#fff",
-        padding: "16px",
-        maxWidth: "900px",
-        margin: "0 auto",
-      }}
-    >
-      <AWBCopy booking={booking} copyLabel="ACCOUNT COPY" />
-      <AWBCopy booking={booking} copyLabel="SHIPPER COPY" />
-    </div>
+    <>
+      <style>{`
+      @media screen {
+        .awb-doc-root { max-width: 900px; padding: 16px; }
+      }
+      @media print {
+        .awb-doc-root { max-width: 100%; padding: 0; }
+        .barcode-bar { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+      }
+      .barcode-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+    `}</style>
+      <div
+        className="awb-doc-root"
+        style={{
+          fontFamily: "Arial, Helvetica, sans-serif",
+          color: "#111",
+          background: "#fff",
+          margin: "0 auto",
+        }}
+      >
+        <AWBCopy booking={booking} copyLabel="ACCOUNT COPY" />
+        <AWBCopy booking={booking} copyLabel="SHIPPER COPY" />
+      </div>
+    </>
   );
 }

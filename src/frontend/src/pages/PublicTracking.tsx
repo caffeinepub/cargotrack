@@ -14,8 +14,66 @@ import {
   User,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { Suspense, useMemo, useRef, useState } from "react";
+import {
+  Component,
+  type ErrorInfo,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import * as THREE from "three";
+
+// Detect WebGL support (checks both WebGL1 and WebGL2)
+function isWebGLAvailable(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      (window.WebGL2RenderingContext && canvas.getContext("webgl2")) ||
+      (window.WebGLRenderingContext &&
+        (canvas.getContext("webgl") || canvas.getContext("experimental-webgl")))
+    );
+  } catch {
+    return false;
+  }
+}
+
+// ErrorBoundary to catch Canvas/WebGL runtime errors and show CSS fallback
+interface CanvasErrorBoundaryProps {
+  fallback: ReactNode;
+  children: ReactNode;
+}
+interface CanvasErrorBoundaryState {
+  hasError: boolean;
+}
+class CanvasErrorBoundary extends Component<
+  CanvasErrorBoundaryProps,
+  CanvasErrorBoundaryState
+> {
+  constructor(props: CanvasErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(_: Error): CanvasErrorBoundaryState {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn(
+      "3D Canvas error, falling back to CSS animation:",
+      error,
+      info,
+    );
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 import { StatusBadge } from "../components/StatusBadge";
 import { TrackingTimeline } from "../components/TrackingTimeline";
 import {
@@ -531,9 +589,133 @@ function Scene3D() {
 
 // ─── Public Tracking Page ────────────────────────────────────────────────────
 
+// CSS-only animated background fallback (no WebGL)
+function AnimatedFallbackBg() {
+  return (
+    <div
+      className="absolute inset-0 z-0 overflow-hidden"
+      style={{ background: "#080c14" }}
+    >
+      {/* Animated gradient orbs */}
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 600,
+          height: 600,
+          top: "50%",
+          left: "50%",
+          x: "-50%",
+          y: "-50%",
+          background:
+            "radial-gradient(circle, rgba(0,212,170,0.18) 0%, rgba(0,90,70,0.08) 50%, transparent 70%)",
+          filter: "blur(40px)",
+        }}
+        animate={{ scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }}
+        transition={{
+          duration: 6,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
+      />
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 300,
+          height: 300,
+          top: "30%",
+          left: "60%",
+          background:
+            "radial-gradient(circle, rgba(0,180,148,0.15) 0%, transparent 70%)",
+          filter: "blur(30px)",
+        }}
+        animate={{ x: [0, 40, 0], y: [0, -30, 0], scale: [1, 1.08, 1] }}
+        transition={{
+          duration: 8,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+          delay: 1,
+        }}
+      />
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: 200,
+          height: 200,
+          bottom: "25%",
+          left: "25%",
+          background:
+            "radial-gradient(circle, rgba(255,209,102,0.1) 0%, transparent 70%)",
+          filter: "blur(24px)",
+        }}
+        animate={{ x: [0, -30, 0], y: [0, 20, 0] }}
+        transition={{
+          duration: 7,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+          delay: 2,
+        }}
+      />
+      {/* Animated grid lines */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(0,212,170,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,170,0.04) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
+      {/* Animated plane icon */}
+      <motion.div
+        className="absolute"
+        style={{ top: "38%", left: 0 }}
+        animate={{ x: ["0vw", "100vw"] }}
+        transition={{
+          duration: 18,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "linear",
+          delay: 2,
+        }}
+      >
+        <Plane className="h-8 w-8 opacity-20" style={{ color: "#00d4aa" }} />
+      </motion.div>
+      {/* Animated ship icon */}
+      <motion.div
+        className="absolute"
+        style={{ bottom: "30%", left: 0 }}
+        animate={{ x: ["0vw", "100vw"] }}
+        transition={{
+          duration: 28,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "linear",
+          delay: 6,
+        }}
+      >
+        <Anchor className="h-7 w-7 opacity-15" style={{ color: "#ffd166" }} />
+      </motion.div>
+      {/* Floating package */}
+      <motion.div
+        className="absolute"
+        style={{ top: "55%", right: "15%" }}
+        animate={{ y: [0, -18, 0], opacity: [0.15, 0.3, 0.15] }}
+        transition={{
+          duration: 5,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
+      >
+        <Package
+          className="h-10 w-10"
+          style={{ color: "rgba(0,212,170,0.3)" }}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
 export function PublicTracking() {
   const [inputValue, setInputValue] = useState("");
   const [searchAWB, setSearchAWB] = useState<string | null>(null);
+  const [webglSupported] = useState(() => isWebGLAvailable());
 
   const { booking, isLoading, notFound } = useBookingByAWBPublic(searchAWB);
   const { updates } = useTrackingByAWBPublic(booking?.awbNumber ?? null);
@@ -567,19 +749,38 @@ export function PublicTracking() {
       <main className="flex-1">
         <section
           className="relative flex flex-col items-center justify-center overflow-hidden"
-          style={{ minHeight: "100vh" }}
+          style={{ minHeight: "100vh", background: "#080c14" }}
         >
-          {/* 3D Canvas background */}
-          <div className="absolute inset-0 z-0">
-            <Canvas
-              camera={{ position: [0, 0, 5], fov: 55 }}
-              gl={{ alpha: true, antialias: true }}
-              style={{ background: "transparent" }}
-            >
-              <Suspense fallback={null}>
-                <Scene3D />
-              </Suspense>
-            </Canvas>
+          {/* 3D Canvas background — falls back to CSS animation when WebGL unavailable */}
+          <div
+            className="absolute inset-0 z-0"
+            style={{ background: "#080c14" }}
+          >
+            <CanvasErrorBoundary fallback={<AnimatedFallbackBg />}>
+              {webglSupported ? (
+                <Canvas
+                  camera={{ position: [0, 0, 5], fov: 55 }}
+                  gl={{
+                    alpha: false,
+                    antialias: true,
+                    powerPreference: "default",
+                    failIfMajorPerformanceCaveat: false,
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    background: "#080c14",
+                    display: "block",
+                  }}
+                >
+                  <Suspense fallback={null}>
+                    <Scene3D />
+                  </Suspense>
+                </Canvas>
+              ) : (
+                <AnimatedFallbackBg />
+              )}
+            </CanvasErrorBoundary>
           </div>
 
           {/* Dark gradient overlay to frame content */}

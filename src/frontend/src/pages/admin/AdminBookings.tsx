@@ -45,13 +45,11 @@ import { toast } from "sonner";
 import { BookingStatus, KycType } from "../../backend.d";
 import type { Booking } from "../../backend.d";
 import { StatusBadge } from "../../components/StatusBadge";
-import { TrackingTimeline } from "../../components/TrackingTimeline";
 import {
   useAllBookings,
   useAllFranchises,
   useAssignAWBAndApprove,
   useRejectBooking,
-  useTrackingByAWB,
   useUpdateBooking,
 } from "../../hooks/useLocalStore";
 import { COUNTRIES } from "../../lib/constants";
@@ -100,7 +98,6 @@ function BookingDetailModal({
   onClose: () => void;
   onEdit: () => void;
 }) {
-  const { updates: tracking } = useTrackingByAWB(booking.awbNumber ?? null);
   const handlePrintInvoice = () => {
     window.open(`/print/invoice/${booking.bookingId.toString()}`, "_blank");
   };
@@ -358,20 +355,6 @@ function BookingDetailModal({
             </div>
           </div>
         )}
-
-        {/* Tracking */}
-        <div>
-          <h3 className="font-semibold text-sm mb-3 uppercase tracking-wider text-muted-foreground">
-            Tracking History
-          </h3>
-          {tracking && tracking.length > 0 ? (
-            <TrackingTimeline updates={tracking} compact />
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              No tracking updates yet.
-            </p>
-          )}
-        </div>
       </div>
 
       <DialogFooter>

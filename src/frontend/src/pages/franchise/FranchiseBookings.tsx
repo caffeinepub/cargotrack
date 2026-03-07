@@ -21,11 +21,9 @@ import { useState } from "react";
 import { BookingStatus } from "../../backend.d";
 import type { Booking } from "../../backend.d";
 import { StatusBadge } from "../../components/StatusBadge";
-import { TrackingTimeline } from "../../components/TrackingTimeline";
 import {
   useFranchiseBookings,
   useLocalSession,
-  useTrackingByAWB,
 } from "../../hooks/useLocalStore";
 import { exportBookingsToCSV } from "../../lib/excelExport";
 import { formatDate, formatTimestamp } from "../../lib/helpers";
@@ -38,8 +36,6 @@ function BookingDetail({
   booking: Booking;
   onClose: () => void;
 }) {
-  const { updates: tracking } = useTrackingByAWB(booking.awbNumber ?? null);
-
   const handlePrintInvoice = () => {
     window.open(`/print/invoice/${booking.bookingId.toString()}`, "_blank");
   };
@@ -267,14 +263,6 @@ function BookingDetail({
               </div>
             </div>
           )}
-
-          {/* Tracking */}
-          <div>
-            <h3 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-3">
-              Tracking
-            </h3>
-            <TrackingTimeline updates={tracking ?? []} compact />
-          </div>
         </div>
 
         <DialogFooter>

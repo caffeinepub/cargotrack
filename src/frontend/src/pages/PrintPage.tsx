@@ -30,15 +30,7 @@ export function PrintPage({ docType }: PrintPageProps) {
     }
   }, [bookingId]);
 
-  useEffect(() => {
-    if (booking) {
-      // Give the DOM a moment to render before printing
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [booking]);
+  // No auto-print: user sees the document on screen first and clicks Print manually
 
   if (notFound) {
     return (
@@ -72,15 +64,27 @@ export function PrintPage({ docType }: PrintPageProps) {
     );
   }
 
-  return (
-    <div>
-      <style>{`
+  const printStyles =
+    docType === "label"
+      ? `
         @media print {
-          @page { margin: 10mm; }
-          body { margin: 0; }
+          @page { size: 4in 6in; margin: 0; }
+          body { margin: 0; background: #fff; }
+          .no-print { display: none !important; }
+          .label-wrapper { padding: 0 !important; background: #fff !important; min-height: unset !important; }
+        }
+      `
+      : `
+        @media print {
+          @page { size: A4 portrait; margin: 8mm; }
+          body { margin: 0; background: #fff; }
           .no-print { display: none !important; }
         }
-      `}</style>
+      `;
+
+  return (
+    <div>
+      <style>{printStyles}</style>
       <div
         className="no-print"
         style={{
@@ -126,6 +130,7 @@ export function PrintPage({ docType }: PrintPageProps) {
         <AccountsInvoiceDocument booking={booking} />
       ) : docType === "label" ? (
         <div
+          className="label-wrapper"
           style={{
             padding: "20px",
             background: "#f5f5f5",
