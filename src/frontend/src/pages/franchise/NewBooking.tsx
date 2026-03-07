@@ -273,11 +273,10 @@ export function NewBooking() {
       !consigneePhone ||
       !consigneeCity ||
       !consigneeZipCode ||
-      !consigneeCountry ||
       !consigneeIdNumber
     ) {
       toast.error(
-        "Please fill in all consignee details including city, zip code, country and phone",
+        "Please fill in all consignee details including city, zip code and phone",
       );
       return;
     }
