@@ -35,6 +35,7 @@ import {
   Plus,
   Printer,
   Receipt,
+  ReceiptText,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -2410,6 +2411,528 @@ function useChargeCountMap(bookings: Booking[]): Record<string, number> {
 
 // ─── Main AccountsPage ────────────────────────────────────────────────────────
 
+// ─── GST Bills Tab ────────────────────────────────────────────────────────────
+
+type GstServiceRow = {
+  id: string;
+  serviceName: string;
+  taxableAmount: number;
+};
+
+type GstBill = {
+  id: string;
+  billNumber: string;
+  date: string;
+  shipperName: string;
+  shipperGstin: string;
+  worldyflyGstin: string;
+  taxType: "cgst_sgst" | "igst";
+  services: GstServiceRow[];
+  totalTaxable: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  grandTotal: number;
+  createdAt: string;
+};
+
+const GST_SERVICE_SUGGESTIONS = [
+  "Air Cargo",
+  "TSP Clearance",
+  "Documentation",
+  "Handling Charges",
+  "Packaging",
+  "Custom Clearance",
+  "Other",
+];
+
+function calcGstBillTotals(
+  services: GstServiceRow[],
+  taxType: "cgst_sgst" | "igst",
+): Pick<GstBill, "totalTaxable" | "cgst" | "sgst" | "igst" | "grandTotal"> {
+  const totalTaxable = services.reduce((s, r) => s + (r.taxableAmount || 0), 0);
+  const cgst = taxType === "cgst_sgst" ? totalTaxable * 0.09 : 0;
+  const sgst = taxType === "cgst_sgst" ? totalTaxable * 0.09 : 0;
+  const igst = taxType === "igst" ? totalTaxable * 0.18 : 0;
+  const grandTotal = totalTaxable + cgst + sgst + igst;
+  return { totalTaxable, cgst, sgst, igst, grandTotal };
+}
+
+function loadGstBills(): GstBill[] {
+  try {
+    const raw = localStorage.getItem("gstBills");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveGstBills(bills: GstBill[]) {
+  localStorage.setItem("gstBills", JSON.stringify(bills));
+}
+
+function GstBillsTab() {
+  const [bills, setBills] = useState<GstBill[]>(() => loadGstBills());
+  const [showForm, setShowForm] = useState(false);
+
+  // Form state
+  const [billNumber, setBillNumber] = useState("");
+  const [date, setDate] = useState(today());
+  const [shipperName, setShipperName] = useState("");
+  const [shipperGstin, setShipperGstin] = useState("");
+  const [worldyflyGstin, setWorldyflyGstin] = useState("32CWHPB3468A1Z3");
+  const [taxType, setTaxType] = useState<"cgst_sgst" | "igst">("cgst_sgst");
+  const [services, setServices] = useState<GstServiceRow[]>([
+    { id: crypto.randomUUID(), serviceName: "", taxableAmount: 0 },
+  ]);
+
+  // Saved shipper names for autocomplete
+  const savedShippers = useMemo(() => {
+    return [...new Set(bills.map((b) => b.shipperName).filter(Boolean))];
+  }, [bills]);
+
+  const totals = useMemo(
+    () => calcGstBillTotals(services, taxType),
+    [services, taxType],
+  );
+
+  const resetForm = () => {
+    setBillNumber("");
+    setDate(today());
+    setShipperName("");
+    setShipperGstin("");
+    setWorldyflyGstin("32CWHPB3468A1Z3");
+    setTaxType("cgst_sgst");
+    setServices([
+      { id: crypto.randomUUID(), serviceName: "", taxableAmount: 0 },
+    ]);
+  };
+
+  const handleAddService = () => {
+    setServices((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), serviceName: "", taxableAmount: 0 },
+    ]);
+  };
+
+  const handleRemoveService = (id: string) => {
+    setServices((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleServiceChange = (
+    id: string,
+    field: keyof GstServiceRow,
+    value: string | number,
+  ) => {
+    setServices((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)),
+    );
+  };
+
+  const handleSave = () => {
+    if (!billNumber.trim()) {
+      toast.error("Bill Number is required");
+      return;
+    }
+    if (!date) {
+      toast.error("Date is required");
+      return;
+    }
+    if (!shipperName.trim()) {
+      toast.error("Shipper Name is required");
+      return;
+    }
+    if (services.some((s) => !s.serviceName.trim())) {
+      toast.error("All service rows must have a name");
+      return;
+    }
+    if (services.some((s) => s.taxableAmount <= 0)) {
+      toast.error("All service amounts must be greater than 0");
+      return;
+    }
+
+    const newBill: GstBill = {
+      id: crypto.randomUUID(),
+      billNumber: billNumber.trim(),
+      date,
+      shipperName: shipperName.trim(),
+      shipperGstin: shipperGstin.trim(),
+      worldyflyGstin: worldyflyGstin.trim(),
+      taxType,
+      services,
+      ...totals,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newBill, ...bills];
+    setBills(updated);
+    saveGstBills(updated);
+    toast.success("GST Bill saved successfully");
+    setShowForm(false);
+    resetForm();
+  };
+
+  const handleDelete = (id: string) => {
+    const updated = bills.filter((b) => b.id !== id);
+    setBills(updated);
+    saveGstBills(updated);
+    toast.success("GST Bill deleted");
+  };
+
+  const handlePrint = (bill: GstBill) => {
+    window.open(`/print/gst-bill/${bill.id}`, "_blank");
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-5"
+    >
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="font-semibold text-lg flex items-center gap-2">
+            <ReceiptText className="h-5 w-5 text-primary" />
+            GST Bills
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Create and manage GST tax invoices for air cargo shippers
+          </p>
+        </div>
+        <Button
+          onClick={() => {
+            setShowForm((v) => !v);
+            if (showForm) resetForm();
+          }}
+          data-ocid="accounts.gst_bills.open_modal_button"
+          className="flex items-center gap-1.5"
+        >
+          <Plus className="h-4 w-4" />
+          {showForm ? "Cancel" : "Create GST Bill"}
+        </Button>
+      </div>
+
+      {/* Create form */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-xl border border-border bg-card p-5 space-y-5">
+              <h3 className="font-semibold text-base">New GST Bill</h3>
+
+              {/* Bill details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gst-bill-number">GST Bill Number *</Label>
+                  <Input
+                    id="gst-bill-number"
+                    placeholder="e.g. GST-2026-001"
+                    value={billNumber}
+                    onChange={(e) => setBillNumber(e.target.value)}
+                    data-ocid="accounts.gst_bills.input"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gst-date">Date *</Label>
+                  <Input
+                    id="gst-date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    data-ocid="accounts.gst_bills.date_input"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gst-shipper-name">Shipper Name *</Label>
+                  <Input
+                    id="gst-shipper-name"
+                    placeholder="Shipper / Company name"
+                    value={shipperName}
+                    onChange={(e) => setShipperName(e.target.value)}
+                    list="gst-shipper-suggestions"
+                    data-ocid="accounts.gst_bills.shipper_input"
+                  />
+                  <datalist id="gst-shipper-suggestions">
+                    {savedShippers.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gst-shipper-gstin">Shipper GSTIN</Label>
+                  <Input
+                    id="gst-shipper-gstin"
+                    placeholder="e.g. 27AAPFU0939F1ZV"
+                    value={shipperGstin}
+                    onChange={(e) => setShipperGstin(e.target.value)}
+                    data-ocid="accounts.gst_bills.shipper_gstin_input"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gst-worldyfly-gstin">Worldyfly GSTIN</Label>
+                  <Input
+                    id="gst-worldyfly-gstin"
+                    value={worldyflyGstin}
+                    onChange={(e) => setWorldyflyGstin(e.target.value)}
+                    data-ocid="accounts.gst_bills.worldyfly_gstin_input"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Tax Type *</Label>
+                  <Select
+                    value={taxType}
+                    onValueChange={(v) => setTaxType(v as "cgst_sgst" | "igst")}
+                  >
+                    <SelectTrigger data-ocid="accounts.gst_bills.tax_type_select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cgst_sgst">
+                        CGST + SGST (Intrastate - Kerala)
+                      </SelectItem>
+                      <SelectItem value="igst">
+                        IGST (Interstate / International)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Services table */}
+              <div className="space-y-2">
+                <Label>Services *</Label>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="text-xs">Service Name</TableHead>
+                        <TableHead className="text-xs text-right w-40">
+                          Taxable Amount (INR)
+                        </TableHead>
+                        <TableHead className="text-xs w-12" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {services.map((svc, idx) => (
+                        <TableRow key={svc.id}>
+                          <TableCell>
+                            <Input
+                              placeholder="e.g. Air Cargo"
+                              value={svc.serviceName}
+                              onChange={(e) =>
+                                handleServiceChange(
+                                  svc.id,
+                                  "serviceName",
+                                  e.target.value,
+                                )
+                              }
+                              list="gst-service-suggestions"
+                              className="h-8 text-sm"
+                              data-ocid={`accounts.gst_bills.service_input.${idx + 1}`}
+                            />
+                            <datalist id="gst-service-suggestions">
+                              {GST_SERVICE_SUGGESTIONS.map((s) => (
+                                <option key={s} value={s} />
+                              ))}
+                            </datalist>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={svc.taxableAmount || ""}
+                              onChange={(e) =>
+                                handleServiceChange(
+                                  svc.id,
+                                  "taxableAmount",
+                                  Number.parseFloat(e.target.value) || 0,
+                                )
+                              }
+                              className="h-8 text-sm text-right"
+                              data-ocid={`accounts.gst_bills.amount_input.${idx + 1}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => handleRemoveService(svc.id)}
+                              disabled={services.length === 1}
+                              data-ocid={`accounts.gst_bills.delete_button.${idx + 1}`}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddService}
+                  data-ocid="accounts.gst_bills.add_service_button"
+                  className="flex items-center gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Service Row
+                </Button>
+              </div>
+
+              {/* Calculated summary */}
+              <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-2 max-w-sm ml-auto">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Taxable</span>
+                  <span className="font-mono">
+                    {formatINR(totals.totalTaxable)}
+                  </span>
+                </div>
+                {taxType === "cgst_sgst" ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">CGST @ 9%</span>
+                      <span className="font-mono">
+                        {formatINR(totals.cgst)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">SGST @ 9%</span>
+                      <span className="font-mono">
+                        {formatINR(totals.sgst)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">IGST @ 18%</span>
+                    <span className="font-mono">{formatINR(totals.igst)}</span>
+                  </div>
+                )}
+                <div className="border-t border-border pt-2 flex justify-between font-semibold">
+                  <span>Grand Total</span>
+                  <span className="font-mono text-primary">
+                    {formatINR(totals.grandTotal)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Save button */}
+              <div className="flex justify-end gap-3 pt-2 border-t border-border">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowForm(false);
+                    resetForm();
+                  }}
+                  data-ocid="accounts.gst_bills.cancel_button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  data-ocid="accounts.gst_bills.submit_button"
+                >
+                  <Check className="h-4 w-4 mr-1.5" />
+                  Save GST Bill
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bills list */}
+      {bills.length === 0 ? (
+        <div
+          className="py-16 flex flex-col items-center gap-3 text-muted-foreground"
+          data-ocid="accounts.gst_bills.empty_state"
+        >
+          <ReceiptText className="h-10 w-10 opacity-40" />
+          <p className="text-sm">No GST bills created yet.</p>
+          <p className="text-xs">
+            Click &quot;Create GST Bill&quot; to get started.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <Table data-ocid="accounts.gst_bills.table">
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="text-xs">Bill No.</TableHead>
+                <TableHead className="text-xs">Date</TableHead>
+                <TableHead className="text-xs">Shipper</TableHead>
+                <TableHead className="text-xs">Tax Type</TableHead>
+                <TableHead className="text-xs text-right">
+                  Grand Total
+                </TableHead>
+                <TableHead className="text-xs w-24">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {bills.map((bill, idx) => (
+                <TableRow
+                  key={bill.id}
+                  data-ocid={`accounts.gst_bills.item.${idx + 1}`}
+                >
+                  <TableCell className="font-mono text-sm font-semibold">
+                    {bill.billNumber}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {bill.date}
+                  </TableCell>
+                  <TableCell className="text-sm">{bill.shipperName}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {bill.taxType === "cgst_sgst" ? "CGST+SGST" : "IGST"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm font-semibold text-primary">
+                    {formatINR(bill.grandTotal)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handlePrint(bill)}
+                        title="Print GST Bill"
+                        data-ocid={`accounts.gst_bills.print_button.${idx + 1}`}
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(bill.id)}
+                        title="Delete"
+                        data-ocid={`accounts.gst_bills.delete_button.${idx + 1}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export function AccountsPage() {
   const { session } = useLocalSession();
   const isAdmin = session?.role === "admin";
@@ -2522,6 +3045,14 @@ export function AccountsPage() {
                 <FileText className="h-4 w-4" />
                 Reports
               </TabsTrigger>
+              <TabsTrigger
+                value="gst-bills"
+                className="flex items-center gap-1.5 text-sm"
+                data-ocid="accounts.gst_bills_tab"
+              >
+                <ReceiptText className="h-4 w-4" />
+                GST Bills
+              </TabsTrigger>
             </>
           )}
           {!isAdmin && (
@@ -2572,6 +3103,9 @@ export function AccountsPage() {
                 expenses={expenses}
                 incomeEntries={incomeEntries}
               />
+            </TabsContent>
+            <TabsContent value="gst-bills" className="mt-5">
+              <GstBillsTab />
             </TabsContent>
           </>
         )}

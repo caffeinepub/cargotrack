@@ -10,6 +10,7 @@ import {
 import { AdminLayout } from "./layouts/AdminLayout";
 import { FranchiseLayout } from "./layouts/FranchiseLayout";
 import { AccountsPage } from "./pages/AccountsPage";
+import { GstBillPrint } from "./pages/GstBillPrint";
 import { LoginPage } from "./pages/LoginPage";
 import { PrintPage } from "./pages/PrintPage";
 import { PublicTracking } from "./pages/PublicTracking";
@@ -165,6 +166,12 @@ const printLabelRoute = createRoute({
   component: () => <PrintPage docType="label" />,
 });
 
+const printGstBillRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/print/gst-bill/$gstBillId",
+  component: GstBillPrint,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -172,6 +179,7 @@ const routeTree = rootRoute.addChildren([
   printAWBRoute,
   printAccountsInvoiceRoute,
   printLabelRoute,
+  printGstBillRoute,
   adminLayoutRoute.addChildren([
     adminIndexRoute,
     adminDashboardRoute,
