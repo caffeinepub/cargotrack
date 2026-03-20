@@ -15,6 +15,42 @@ export interface AWBAssignRequest {
   'awbNumber' : string,
 }
 export type AWBNumber = string;
+export interface BillingItem {
+  'rate' : number,
+  'gstPercent' : number,
+  'description' : string,
+  'productId' : string,
+  'quantity' : bigint,
+  'amount' : number,
+}
+export interface BillingRecord {
+  'id' : BillingRecordId,
+  'customerName' : string,
+  'status' : { 'paid' : null } |
+    { 'unpaid' : null } |
+    { 'partial' : null },
+  'customerGstin' : string,
+  'paymentMethod' : string,
+  'taxableAmount' : number,
+  'cgst' : number,
+  'discountAmount' : number,
+  'igst' : number,
+  'createdAt' : Time,
+  'sgst' : number,
+  'billDate' : Time,
+  'billType' : { 'gst' : null } |
+    { 'nonGst' : null },
+  'totalAmount' : number,
+  'notes' : string,
+  'billNumber' : string,
+  'customerId' : string,
+  'items' : Array<BillingItem>,
+  'taxType' : { 'igst' : null } |
+    { 'none' : null } |
+    { 'cgstSgst' : null },
+  'subtotal' : number,
+}
+export type BillingRecordId = string;
 export interface Booking {
   'shipper' : Shipper,
   'status' : BookingStatus,
@@ -58,6 +94,15 @@ export interface Consignee {
   'phone' : string,
   'idType' : KycType,
 }
+export interface Customer {
+  'id' : CustomerId,
+  'name' : string,
+  'createdAt' : Time,
+  'gstin' : string,
+  'address' : string,
+  'phone' : string,
+}
+export type CustomerId = string;
 export interface Franchise {
   'principal' : Principal,
   'username' : string,
@@ -77,6 +122,24 @@ export type KycType = { 'pan' : null } |
   { 'passport' : null } |
   { 'aadhaar' : null } |
   { 'drivingLicense' : null };
+export interface PaymentRecord {
+  'id' : string,
+  'paymentMethod' : string,
+  'notes' : string,
+  'paymentDate' : Time,
+  'amount' : number,
+  'billingRecordId' : string,
+}
+export interface Product {
+  'id' : ProductId,
+  'name' : string,
+  'unit' : string,
+  'gstPercent' : number,
+  'isActive' : boolean,
+  'price' : number,
+  'hsnSacCode' : string,
+}
+export type ProductId = string;
 export interface Shipper {
   'kycNumber' : string,
   'name' : string,
@@ -127,36 +190,119 @@ export interface _SERVICE {
   'adminResetFranchisePassword' : ActorMethod<[FranchiseId, string], Franchise>,
   'assignAWBAndApprove' : ActorMethod<[AWBAssignRequest], Booking>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createBillingRecord' : ActorMethod<
+    [
+      string,
+      Time,
+      { 'gst' : null } |
+        { 'nonGst' : null },
+      string,
+      string,
+      string,
+      Array<BillingItem>,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      { 'igst' : null } |
+        { 'none' : null } |
+        { 'cgstSgst' : null },
+      string,
+      { 'paid' : null } |
+        { 'unpaid' : null } |
+        { 'partial' : null },
+      string,
+    ],
+    BillingRecord
+  >,
   'createBooking' : ActorMethod<
     [Shipper, Consignee, string, Invoice, Array<Box>, Array<BoxItem>],
     Booking
   >,
+  'createCustomer' : ActorMethod<[string, string, string, string], Customer>,
   'createFranchise' : ActorMethod<
     [Principal, string, string, string, string],
     Franchise
   >,
+  'createProduct' : ActorMethod<
+    [string, number, number, string, string],
+    Product
+  >,
+  'deleteBillingRecord' : ActorMethod<[BillingRecordId], undefined>,
+  'deleteCustomer' : ActorMethod<[CustomerId], undefined>,
+  'deleteProduct' : ActorMethod<[ProductId], undefined>,
   'franchiseeUpdatePassword' : ActorMethod<[string, string], undefined>,
   'getAllFranchisees' : ActorMethod<[], Array<Franchise>>,
+  'getAllPayments' : ActorMethod<[], Array<PaymentRecord>>,
+  'getBillingRecordById' : ActorMethod<[BillingRecordId], BillingRecord>,
+  'getBillingRecords' : ActorMethod<[], Array<BillingRecord>>,
   'getBookingByAWB' : ActorMethod<[AWBNumber], Booking>,
   'getBookingById' : ActorMethod<[BookingId], Booking>,
   'getBookings' : ActorMethod<[], Array<Booking>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getCustomers' : ActorMethod<[], Array<Customer>>,
   'getFranchise' : ActorMethod<[FranchiseId], Franchise>,
+  'getPaymentsForBill' : ActorMethod<[string], Array<PaymentRecord>>,
+  'getProducts' : ActorMethod<[], Array<Product>>,
   'getTrackingByAWB' : ActorMethod<[AWBNumber], Array<TrackingUpdate>>,
   'getTrackingByBookingId' : ActorMethod<[BookingId], Array<TrackingUpdate>>,
   'getUnreadCount' : ActorMethod<[], bigint>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'markNotificationsRead' : ActorMethod<[], undefined>,
+  'recordPayment' : ActorMethod<
+    [string, number, string, Time, string],
+    PaymentRecord
+  >,
   'rejectBooking' : ActorMethod<[BookingId], Booking>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'test' : ActorMethod<[], undefined>,
+  'updateBillingRecord' : ActorMethod<
+    [
+      BillingRecordId,
+      string,
+      Time,
+      { 'gst' : null } |
+        { 'nonGst' : null },
+      string,
+      string,
+      string,
+      Array<BillingItem>,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      { 'igst' : null } |
+        { 'none' : null } |
+        { 'cgstSgst' : null },
+      string,
+      { 'paid' : null } |
+        { 'unpaid' : null } |
+        { 'partial' : null },
+      string,
+    ],
+    BillingRecord
+  >,
+  'updateCustomer' : ActorMethod<
+    [CustomerId, string, string, string, string],
+    Customer
+  >,
   'updateFranchise' : ActorMethod<
     [FranchiseId, string, string, string],
     Franchise
   >,
   'updateFranchiseStatus' : ActorMethod<[FranchiseId, boolean], Franchise>,
+  'updateProduct' : ActorMethod<
+    [ProductId, string, number, number, string, string, boolean],
+    Product
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

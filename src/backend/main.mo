@@ -1,27 +1,29 @@
 import Map "mo:core/Map";
-import Set "mo:core/Set";
 import Time "mo:core/Time";
 import Array "mo:core/Array";
 import Runtime "mo:core/Runtime";
-import Order "mo:core/Order";
 import Principal "mo:core/Principal";
-import Iter "mo:core/Iter";
 import Text "mo:core/Text";
 import List "mo:core/List";
-import Bool "mo:core/Bool";
-import Nat8 "mo:core/Nat8";
-import Char "mo:core/Char";
-import Nat "mo:core/Nat";
 import Float "mo:core/Float";
+import Migration "migration";
+import Iter "mo:core/Iter";
+import Order "mo:core/Order";
+import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
+// Specify the state transformation for upgrade/downgrade.
+(with migration = Migration.run)
 actor {
   type UserId = Text;
   type FranchiseId = Text;
   type BookingId = Nat;
   type AWBNumber = Text;
+  type CustomerId = Text;
+  type ProductId = Text;
+  type BillingRecordId = Text;
 
   public type UserRole = AccessControl.UserRole;
   public type BookingStatus = { #pending; #approved; #rejected };
@@ -156,19 +158,89 @@ actor {
     franchiseId : ?FranchiseId;
   };
 
+  public type Customer = {
+    id : CustomerId;
+    name : Text;
+    phone : Text;
+    address : Text;
+    gstin : Text;
+    createdAt : Time.Time;
+  };
+
+  public type Product = {
+    id : ProductId;
+    name : Text;
+    price : Float;
+    gstPercent : Float;
+    hsnSacCode : Text;
+    unit : Text;
+    isActive : Bool;
+  };
+
+  public type BillingItem = {
+    productId : Text;
+    description : Text;
+    quantity : Nat;
+    rate : Float;
+    gstPercent : Float;
+    amount : Float;
+  };
+
+  public type BillingRecord = {
+    id : BillingRecordId;
+    billNumber : Text;
+    billDate : Time.Time;
+    billType : { #gst; #nonGst };
+    customerId : Text;
+    customerName : Text;
+    customerGstin : Text;
+    items : [BillingItem];
+    subtotal : Float;
+    discountAmount : Float;
+    taxableAmount : Float;
+    cgst : Float;
+    sgst : Float;
+    igst : Float;
+    totalAmount : Float;
+    taxType : { #cgstSgst; #igst; #none };
+    paymentMethod : Text;
+    status : { #paid; #unpaid; #partial };
+    notes : Text;
+    createdAt : Time.Time;
+  };
+
+  public type PaymentRecord = {
+    id : Text;
+    billingRecordId : Text;
+    amount : Float;
+    paymentMethod : Text;
+    paymentDate : Time.Time;
+    notes : Text;
+  };
+
   var nextFranchiseIdCount : Nat = 0;
   var nextBookingIdCount : Nat = 100000;
   var nextInvoiceIdCount : Nat = 0;
+  var nextCustomerIdCount : Nat = 0;
+  var nextProductIdCount : Nat = 0;
+  var nextBillingRecordIdCount : Nat = 0;
+  var nextPaymentRecordIdCount : Nat = 0;
 
   let franchisees = Map.empty<FranchiseId, Franchise>();
-  let principalToFranchiseId = Map.empty<Principal, FranchiseId>();
+  let principalsToFranchiseId = Map.empty<Principal, FranchiseId>();
   let userPasswords = Map.empty<UserId, Text>();
   let bookings = Map.empty<BookingId, Booking>();
   let trackingUpdates = Map.empty<AWBNumber, List.List<TrackingUpdate>>();
   var unreadNotifications : Nat = 0;
+
   let adminUserId : Text = "admin";
   let adminUserRole : UserRole = #admin;
+
   let userProfiles = Map.empty<Principal, UserProfile>();
+  let customers = Map.empty<CustomerId, Customer>();
+  let products = Map.empty<ProductId, Product>();
+  let billingRecords = Map.empty<BillingRecordId, BillingRecord>();
+  let paymentRecords = Map.empty<Text, PaymentRecord>();
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -214,12 +286,36 @@ actor {
     currentId;
   };
 
+  func getNextCustomerId() : Text {
+    let currentId = "CUST-" # nextCustomerIdCount.toText();
+    nextCustomerIdCount += 1;
+    currentId;
+  };
+
+  func getNextProductId() : Text {
+    let currentId = "PROD-" # nextProductIdCount.toText();
+    nextProductIdCount += 1;
+    currentId;
+  };
+
+  func getNextBillingRecordId() : Text {
+    let currentId = "BILL-" # nextBillingRecordIdCount.toText();
+    nextBillingRecordIdCount += 1;
+    currentId;
+  };
+
+  func getNextPaymentRecordId() : Text {
+    let currentId = "PAY-" # nextPaymentRecordIdCount.toText();
+    nextPaymentRecordIdCount += 1;
+    currentId;
+  };
+
   func getFranchiseIdForCaller(caller : Principal) : ?FranchiseId {
-    principalToFranchiseId.get(caller);
+    principalsToFranchiseId.get(caller);
   };
 
   func verifyFranchiseOwnership(caller : Principal, franchiseId : FranchiseId) : Bool {
-    switch (principalToFranchiseId.get(caller)) {
+    switch (principalsToFranchiseId.get(caller)) {
       case (null) { false };
       case (?callerFranchiseId) {
         callerFranchiseId == franchiseId;
@@ -262,9 +358,7 @@ actor {
     if (not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Only admins can access this endpoint");
     };
-    let franchises = franchisees.values();
-    let franchiseArray = franchises.toArray();
-    franchiseArray.sort();
+    franchisees.values().toArray().sort();
   };
 
   public shared ({ caller }) func createFranchise(
@@ -289,7 +383,7 @@ actor {
     };
     let defaultPassword = franchiseId;
     franchisees.add(franchiseId, newFranchise);
-    principalToFranchiseId.add(franchisePrincipal, franchiseId);
+    principalsToFranchiseId.add(franchisePrincipal, franchiseId);
     userPasswords.add(franchiseId, defaultPassword);
     AccessControl.assignRole(accessControlState, caller, franchisePrincipal, #user);
 
@@ -300,7 +394,6 @@ actor {
       franchiseId = ?franchiseId;
     };
     userProfiles.add(franchisePrincipal, profile);
-
     newFranchise;
   };
 
@@ -556,7 +649,7 @@ actor {
           Runtime.trap("Booking must be in pending status. Current status is: " # debug_show (booking.status));
         };
 
-        let updatedBooking = {
+        let updatedBooking : Booking = {
           booking with
           awbNumber = ?awbAssignRequest.awbNumber;
           awbAssignedDate = ?Time.now();
@@ -697,6 +790,338 @@ actor {
 
   func trackingCompare(a : TrackingUpdate, b : TrackingUpdate) : Order.Order {
     Int.compare(a.timestamp, b.timestamp);
+  };
+
+  // Accounts Module
+
+  // Customer Management
+
+  public shared ({ caller }) func createCustomer(
+    name : Text,
+    phone : Text,
+    address : Text,
+    gstin : Text,
+  ) : async Customer {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can create customers");
+    };
+
+    let customerId = getNextCustomerId();
+    let customer : Customer = {
+      id = customerId;
+      name;
+      phone;
+      address;
+      gstin;
+      createdAt = Time.now();
+    };
+    customers.add(customerId, customer);
+    customer;
+  };
+
+  public query ({ caller }) func getCustomers() : async [Customer] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can get customers");
+    };
+    customers.values().toArray();
+  };
+
+  public shared ({ caller }) func updateCustomer(
+    id : CustomerId,
+    name : Text,
+    phone : Text,
+    address : Text,
+    gstin : Text,
+  ) : async Customer {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can update customers");
+    };
+
+    switch (customers.get(id)) {
+      case (null) { Runtime.trap("Customer not found") };
+      case (?_customer) {
+        let updatedCustomer : Customer = {
+          id;
+          name;
+          phone;
+          address;
+          gstin;
+          createdAt = Time.now();
+        };
+        customers.add(id, updatedCustomer);
+        updatedCustomer;
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteCustomer(id : CustomerId) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can delete customers");
+    };
+    switch (customers.get(id)) {
+      case (null) { Runtime.trap("Customer not found") };
+      case (?_customer) {
+        customers.remove(id);
+      };
+    };
+  };
+
+  // Product/Service Catalog
+
+  public shared ({ caller }) func createProduct(
+    name : Text,
+    price : Float,
+    gstPercent : Float,
+    hsnSacCode : Text,
+    unit : Text,
+  ) : async Product {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can create products");
+    };
+
+    let productId = getNextProductId();
+    let product : Product = {
+      id = productId;
+      name;
+      price;
+      gstPercent;
+      hsnSacCode;
+      unit;
+      isActive = true;
+    };
+    products.add(productId, product);
+    product;
+  };
+
+  public query ({ caller }) func getProducts() : async [Product] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only authenticated users can get products");
+    };
+    products.values().toArray();
+  };
+
+  public shared ({ caller }) func updateProduct(
+    id : ProductId,
+    name : Text,
+    price : Float,
+    gstPercent : Float,
+    hsnSacCode : Text,
+    unit : Text,
+    isActive : Bool,
+  ) : async Product {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can update products");
+    };
+
+    switch (products.get(id)) {
+      case (null) { Runtime.trap("Product not found") };
+      case (?_product) {
+        let updatedProduct : Product = {
+          id;
+          name;
+          price;
+          gstPercent;
+          hsnSacCode;
+          unit;
+          isActive;
+        };
+        products.add(id, updatedProduct);
+        updatedProduct;
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteProduct(id : ProductId) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can delete products");
+    };
+    switch (products.get(id)) {
+      case (null) { Runtime.trap("Product not found") };
+      case (?_product) {
+        products.remove(id);
+      };
+    };
+  };
+
+  // Billing Records
+
+  public shared ({ caller }) func createBillingRecord(
+    billNumber : Text,
+    billDate : Time.Time,
+    billType : { #gst; #nonGst },
+    customerId : Text,
+    customerName : Text,
+    customerGstin : Text,
+    items : [BillingItem],
+    subtotal : Float,
+    discountAmount : Float,
+    taxableAmount : Float,
+    cgst : Float,
+    sgst : Float,
+    igst : Float,
+    totalAmount : Float,
+    taxType : { #cgstSgst; #igst; #none },
+    paymentMethod : Text,
+    status : { #paid; #unpaid; #partial },
+    notes : Text,
+  ) : async BillingRecord {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can create billing records");
+    };
+
+    let billingRecordId = getNextBillingRecordId();
+    let record : BillingRecord = {
+      id = billingRecordId;
+      billNumber;
+      billDate;
+      billType;
+      customerId;
+      customerName;
+      customerGstin;
+      items;
+      subtotal;
+      discountAmount;
+      taxableAmount;
+      cgst;
+      sgst;
+      igst;
+      totalAmount;
+      taxType;
+      paymentMethod;
+      status;
+      notes;
+      createdAt = Time.now();
+    };
+    billingRecords.add(billingRecordId, record);
+    record;
+  };
+
+  public query ({ caller }) func getBillingRecords() : async [BillingRecord] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can get billing records");
+    };
+    billingRecords.values().toArray();
+  };
+
+  public query ({ caller }) func getBillingRecordById(id : BillingRecordId) : async BillingRecord {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can get billing records by id");
+    };
+    switch (billingRecords.get(id)) {
+      case (null) { Runtime.trap("Billing record not found") };
+      case (?record) { record };
+    };
+  };
+
+  public shared ({ caller }) func updateBillingRecord(
+    id : BillingRecordId,
+    billNumber : Text,
+    billDate : Time.Time,
+    billType : { #gst; #nonGst },
+    customerId : Text,
+    customerName : Text,
+    customerGstin : Text,
+    items : [BillingItem],
+    subtotal : Float,
+    discountAmount : Float,
+    taxableAmount : Float,
+    cgst : Float,
+    sgst : Float,
+    igst : Float,
+    totalAmount : Float,
+    taxType : { #cgstSgst; #igst; #none },
+    paymentMethod : Text,
+    status : { #paid; #unpaid; #partial },
+    notes : Text,
+  ) : async BillingRecord {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can update billing records");
+    };
+
+    switch (billingRecords.get(id)) {
+      case (null) { Runtime.trap("Billing record not found") };
+      case (?_record) {
+        let updatedRecord : BillingRecord = {
+          id;
+          billNumber;
+          billDate;
+          billType;
+          customerId;
+          customerName;
+          customerGstin;
+          items;
+          subtotal;
+          discountAmount;
+          taxableAmount;
+          cgst;
+          sgst;
+          igst;
+          totalAmount;
+          taxType;
+          paymentMethod;
+          status;
+          notes;
+          createdAt = Time.now();
+        };
+        billingRecords.add(id, updatedRecord);
+        updatedRecord;
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteBillingRecord(id : BillingRecordId) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can delete billing records");
+    };
+    switch (billingRecords.get(id)) {
+      case (null) { Runtime.trap("Billing record not found") };
+      case (?_record) {
+        billingRecords.remove(id);
+      };
+    };
+  };
+
+  // Payment Records
+  public shared ({ caller }) func recordPayment(
+    billingRecordId : Text,
+    amount : Float,
+    paymentMethod : Text,
+    paymentDate : Time.Time,
+    notes : Text,
+  ) : async PaymentRecord {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can record payments");
+    };
+
+    let paymentRecordId = getNextPaymentRecordId();
+    let record : PaymentRecord = {
+      id = paymentRecordId;
+      billingRecordId;
+      amount;
+      paymentMethod;
+      paymentDate;
+      notes;
+    };
+    paymentRecords.add(paymentRecordId, record);
+    record;
+  };
+
+  public query ({ caller }) func getPaymentsForBill(
+    billingRecordId : Text,
+  ) : async [PaymentRecord] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can get payments for bill");
+    };
+    paymentRecords.values().filter(
+      func(record) { record.billingRecordId == billingRecordId }
+    ).toArray();
+  };
+
+  public query ({ caller }) func getAllPayments() : async [PaymentRecord] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can get all payments");
+    };
+    paymentRecords.values().toArray();
   };
 
   public shared ({ caller }) func test() : async () {

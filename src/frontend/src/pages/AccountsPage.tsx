@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Download,
   FileText,
+  Loader2,
   MinusCircle,
   Package,
   PackageOpen,
@@ -39,6 +40,7 @@ import {
   Trash2,
   TrendingDown,
   TrendingUp,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -66,6 +68,12 @@ import {
   useUpdateCharge,
 } from "../hooks/useLocalStore";
 import {
+  useAllPaymentsForBilling,
+  useBillingRecords,
+  useCustomers,
+  useProducts,
+} from "../hooks/useQueries";
+import {
   type StatementRow,
   exportExpenses,
   exportIncome,
@@ -80,6 +88,9 @@ import {
   getChargesByBooking,
   getPaymentsByBooking,
 } from "../lib/store";
+import { BillingTab } from "./accounts/BillingTab";
+import { CustomersTab } from "./accounts/CustomersTab";
+import { ProductsTab } from "./accounts/ProductsTab";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1700,7 +1711,7 @@ function IncomeTab() {
 
 // ─── Tab 5: Reports ───────────────────────────────────────────────────────────
 
-type ReportView = "ledger" | "pl" | "trial";
+type ReportView = "ledger" | "pl" | "trial" | "sales" | "pending";
 
 interface ReportsTabProps {
   bookings: Booking[];
@@ -2038,6 +2049,16 @@ function ReportsTab({
               label: "Trial Balance",
               icon: FileText,
             },
+            {
+              id: "sales" as ReportView,
+              label: "Sales Report",
+              icon: TrendingUp,
+            },
+            {
+              id: "pending" as ReportView,
+              label: "Pending Payments",
+              icon: MinusCircle,
+            },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button
@@ -2364,7 +2385,286 @@ function ReportsTab({
           )}
         </div>
       )}
+
+      {/* ── Sales Report View ── */}
+      {view === "sales" && <SalesReportView />}
+
+      {/* ── Pending Payments View ── */}
+      {view === "pending" && <PendingPaymentsView />}
     </motion.div>
+  );
+}
+
+// ─── SalesReportView (standalone, uses billing records) ──────────────────────
+
+function SalesReportView() {
+  const { data: bills = [], isLoading } = useBillingRecords();
+  const [period, setPeriod] = useState<"daily" | "monthly">("monthly");
+
+  const grouped = useMemo(() => {
+    const map: Record<string, { count: number; total: number; gst: number }> =
+      {};
+    for (const b of bills) {
+      const d = new Date(Number(b.billDate / 1_000_000n));
+      const key =
+        period === "daily"
+          ? d.toISOString().slice(0, 10)
+          : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!map[key]) map[key] = { count: 0, total: 0, gst: 0 };
+      map[key].count += 1;
+      map[key].total += b.totalAmount;
+      map[key].gst += b.cgst + b.sgst + b.igst;
+    }
+    return Object.entries(map).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [bills, period]);
+
+  const grandTotal = grouped.reduce((s, [, v]) => s + v.total, 0);
+  const grandGst = grouped.reduce((s, [, v]) => s + v.gst, 0);
+
+  const formatINRLocal = (n: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+    }).format(n);
+
+  const exportCSV = () => {
+    const rows = [["Period", "Bills", "GST", "Total"]];
+    for (const [key, v] of grouped) {
+      rows.push([key, String(v.count), v.gst.toFixed(2), v.total.toFixed(2)]);
+    }
+    rows.push([
+      "TOTAL",
+      String(grouped.reduce((s, [, v]) => s + v.count, 0)),
+      grandGst.toFixed(2),
+      grandTotal.toFixed(2),
+    ]);
+    const csv = `\uFEFF${rows.map((r) => r.join(",")).join("\n")}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sales-report-${period}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          Sales from standalone billing records grouped by{" "}
+          {period === "daily" ? "day" : "month"}.
+        </p>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 p-1 rounded-lg bg-muted">
+            {(["daily", "monthly"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors capitalize ${period === p ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                data-ocid={`accounts.reports.sales_${p}_tab`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCSV}
+            data-ocid="accounts.reports.sales_export_button"
+          >
+            <Download className="h-4 w-4 mr-1.5" /> Export CSV
+          </Button>
+        </div>
+      </div>
+      {isLoading ? (
+        <div
+          className="flex justify-center py-12"
+          data-ocid="accounts.reports.sales_loading_state"
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-primary opacity-60" />
+        </div>
+      ) : grouped.length === 0 ? (
+        <div
+          className="py-12 flex flex-col items-center gap-3 text-muted-foreground"
+          data-ocid="accounts.reports.sales_empty_state"
+        >
+          <TrendingUp className="h-10 w-10 opacity-40" />
+          <p className="text-sm">No billing records found.</p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <Table data-ocid="accounts.reports.sales_table">
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="text-xs">
+                  {period === "daily" ? "Date" : "Month"}
+                </TableHead>
+                <TableHead className="text-xs text-right">Bills</TableHead>
+                <TableHead className="text-xs text-right">
+                  GST Collected
+                </TableHead>
+                <TableHead className="text-xs text-right">
+                  Total Revenue
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {grouped.map(([key, v], idx) => (
+                <TableRow
+                  key={key}
+                  data-ocid={`accounts.reports.sales_item.${idx + 1}`}
+                >
+                  <TableCell className="font-mono text-sm">{key}</TableCell>
+                  <TableCell className="text-right text-sm">
+                    {v.count}
+                  </TableCell>
+                  <TableCell className="text-right text-sm font-mono">
+                    {formatINRLocal(v.gst)}
+                  </TableCell>
+                  <TableCell className="text-right text-sm font-mono font-semibold">
+                    {formatINRLocal(v.total)}
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="bg-muted/40 font-semibold">
+                <TableCell>Total</TableCell>
+                <TableCell className="text-right text-sm">
+                  {grouped.reduce((s, [, v]) => s + v.count, 0)}
+                </TableCell>
+                <TableCell className="text-right text-sm font-mono">
+                  {formatINRLocal(grandGst)}
+                </TableCell>
+                <TableCell className="text-right text-sm font-mono text-primary">
+                  {formatINRLocal(grandTotal)}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PendingPaymentsView ──────────────────────────────────────────────────────
+
+function PendingPaymentsView() {
+  const { data: bills = [], isLoading } = useBillingRecords();
+  const { data: payments = [] } = useAllPaymentsForBilling();
+
+  const formatINRLocal = (n: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+    }).format(n);
+  const fmtDateLocal = (ts: bigint) =>
+    new Date(Number(ts / 1_000_000n)).toLocaleDateString("en-IN");
+
+  const pendingBills = useMemo(() => {
+    return bills
+      .filter((b) => b.status !== "paid")
+      .map((b) => {
+        const paid = payments
+          .filter((p) => p.billingRecordId === b.id)
+          .reduce((s, p) => s + p.amount, 0);
+        return { ...b, paid, balance: b.totalAmount - paid };
+      })
+      .sort((a, bb) => Number(bb.createdAt - a.createdAt));
+  }, [bills, payments]);
+
+  const totalBalance = pendingBills.reduce((s, b) => s + b.balance, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          Bills with outstanding balances (Unpaid or Partial payment).
+        </p>
+        {totalBalance > 0 && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2">
+            <p className="text-xs text-muted-foreground">Total Outstanding</p>
+            <p className="text-lg font-mono font-bold text-destructive">
+              {formatINRLocal(totalBalance)}
+            </p>
+          </div>
+        )}
+      </div>
+      {isLoading ? (
+        <div
+          className="flex justify-center py-12"
+          data-ocid="accounts.reports.pending_loading_state"
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-primary opacity-60" />
+        </div>
+      ) : pendingBills.length === 0 ? (
+        <div
+          className="py-12 flex flex-col items-center gap-3 text-muted-foreground"
+          data-ocid="accounts.reports.pending_empty_state"
+        >
+          <Check className="h-10 w-10 opacity-40" />
+          <p className="text-sm">All bills are paid! No pending payments.</p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <Table data-ocid="accounts.reports.pending_table">
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="text-xs">Bill No.</TableHead>
+                <TableHead className="text-xs">Customer</TableHead>
+                <TableHead className="text-xs">Date</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs text-right">Total</TableHead>
+                <TableHead className="text-xs text-right">Paid</TableHead>
+                <TableHead className="text-xs text-right">
+                  Balance Due
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingBills.map((b, idx) => (
+                <TableRow
+                  key={b.id}
+                  data-ocid={`accounts.reports.pending_item.${idx + 1}`}
+                >
+                  <TableCell className="font-mono text-sm font-semibold">
+                    {b.billNumber}
+                  </TableCell>
+                  <TableCell className="text-sm">{b.customerName}</TableCell>
+                  <TableCell className="text-sm">
+                    {fmtDateLocal(b.billDate)}
+                  </TableCell>
+                  <TableCell>
+                    {b.status === "partial" ? (
+                      <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">
+                        Partial
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-xs">
+                        Unpaid
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right text-sm font-mono">
+                    {formatINRLocal(b.totalAmount)}
+                  </TableCell>
+                  <TableCell className="text-right text-sm font-mono text-green-600">
+                    {formatINRLocal(b.paid)}
+                  </TableCell>
+                  <TableCell className="text-right text-sm font-mono font-semibold text-destructive">
+                    {formatINRLocal(b.balance)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2474,6 +2774,9 @@ function saveGstBills(bills: GstBill[]) {
 function GstBillsTab() {
   const [bills, setBills] = useState<GstBill[]>(() => loadGstBills());
   const [showForm, setShowForm] = useState(false);
+  const { data: gstCustomers = [] } = useCustomers();
+  const { data: gstProducts = [] } = useProducts();
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
   // Form state
   const [billNumber, setBillNumber] = useState("");
@@ -2500,6 +2803,7 @@ function GstBillsTab() {
     setBillNumber("");
     setDate(today());
     setShipperName("");
+    setSelectedCustomerId("");
     setShipperGstin("");
     setWorldyflyGstin("32CWHPB3468A1Z3");
     setTaxType("cgst_sgst");
@@ -2649,6 +2953,31 @@ function GstBillsTab() {
                   />
                 </div>
                 <div className="space-y-1.5">
+                  <Label>Customer (Optional)</Label>
+                  <Select
+                    value={selectedCustomerId}
+                    onValueChange={(id) => {
+                      setSelectedCustomerId(id);
+                      const c = gstCustomers.find((c) => c.id === id);
+                      if (c) {
+                        setShipperName(c.name);
+                        setShipperGstin(c.gstin);
+                      }
+                    }}
+                  >
+                    <SelectTrigger data-ocid="accounts.gst_bills.customer_select">
+                      <SelectValue placeholder="Pick from saved customers..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gstCustomers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
                   <Label htmlFor="gst-shipper-name">Shipper Name *</Label>
                   <Input
                     id="gst-shipper-name"
@@ -2722,6 +3051,34 @@ function GstBillsTab() {
                       {services.map((svc, idx) => (
                         <TableRow key={svc.id}>
                           <TableCell>
+                            {gstProducts.length > 0 && (
+                              <Select
+                                onValueChange={(pid) => {
+                                  const prod = gstProducts.find(
+                                    (p) => p.id === pid,
+                                  );
+                                  if (prod)
+                                    handleServiceChange(
+                                      svc.id,
+                                      "serviceName",
+                                      prod.name,
+                                    );
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs mb-1">
+                                  <SelectValue placeholder="Pick product..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {gstProducts
+                                    .filter((p) => p.isActive)
+                                    .map((p) => (
+                                      <SelectItem key={p.id} value={p.id}>
+                                        {p.name}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                             <Input
                               placeholder="e.g. Air Cargo"
                               value={svc.serviceName}
@@ -3053,6 +3410,30 @@ export function AccountsPage() {
                 <ReceiptText className="h-4 w-4" />
                 GST Bills
               </TabsTrigger>
+              <TabsTrigger
+                value="customers"
+                className="flex items-center gap-1.5 text-sm"
+                data-ocid="accounts.customers_tab"
+              >
+                <Users className="h-4 w-4" />
+                Customers
+              </TabsTrigger>
+              <TabsTrigger
+                value="products"
+                className="flex items-center gap-1.5 text-sm"
+                data-ocid="accounts.products_tab"
+              >
+                <Package className="h-4 w-4" />
+                Products
+              </TabsTrigger>
+              <TabsTrigger
+                value="billing"
+                className="flex items-center gap-1.5 text-sm"
+                data-ocid="accounts.billing_tab"
+              >
+                <FileText className="h-4 w-4" />
+                Billing
+              </TabsTrigger>
             </>
           )}
           {!isAdmin && (
@@ -3106,6 +3487,15 @@ export function AccountsPage() {
             </TabsContent>
             <TabsContent value="gst-bills" className="mt-5">
               <GstBillsTab />
+            </TabsContent>
+            <TabsContent value="customers" className="mt-5">
+              <CustomersTab />
+            </TabsContent>
+            <TabsContent value="products" className="mt-5">
+              <ProductsTab />
+            </TabsContent>
+            <TabsContent value="billing" className="mt-5">
+              <BillingTab />
             </TabsContent>
           </>
         )}
